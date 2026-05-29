@@ -1,0 +1,3307 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LIBRA — Perpustakaan Digital FST</title>
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --clr-bg:          #F7F5F2;
+      --clr-surface:     #FFFFFF;
+      --clr-surface-2:   #F0EDE8;
+      --clr-border:      #E2DDD6;
+      --clr-primary:     #2D5016;   /* deep forest green */
+      --clr-primary-lt:  #3D6B20;
+      --clr-accent:      #8B6914;   /* warm gold */
+      --clr-accent-lt:   #B8891A;
+      --clr-text-h:      #1A1A1A;
+      --clr-text-b:      #3D3D3D;
+      --clr-text-m:      #6B6560;
+      --clr-text-s:      #9E9890;
+      --clr-danger:      #C0392B;
+      --clr-warn:        #D68910;
+      --clr-success:     #1E8449;
+      --clr-info:        #1A5276;
+      --clr-danger-bg:   #FDECEA;
+      --clr-warn-bg:     #FEF9E7;
+      --clr-success-bg:  #EAFAF1;
+      --clr-info-bg:     #EBF5FB;
+      --radius-sm:       6px;
+      --radius-md:       10px;
+      --radius-lg:       16px;
+      --shadow-sm:       0 1px 3px rgba(0,0,0,.08);
+      --shadow-md:       0 4px 16px rgba(0,0,0,.10);
+      --shadow-lg:       0 8px 32px rgba(0,0,0,.13);
+      --font:            'Inter', 'Segoe UI', system-ui, sans-serif;
+      --sidebar-w:       240px;
+      --topbar-h:        64px;
+    }
+    /* ============================================================
+       RESET
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--clr-bg); color: var(--clr-text-b); min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: var(--font); }
+    input, select, textarea { font-family: var(--font); }
+    img { display: block; max-width: 100%; }
+    ul { list-style: none; }
+
+    /* ============================================================
+       TYPOGRAPHY
+    ============================================================ */
+    .t-h1 { font-size: 1.75rem; font-weight: 700; color: var(--clr-text-h); letter-spacing: -.4px; }
+    .t-h2 { font-size: 1.35rem; font-weight: 700; color: var(--clr-text-h); }
+    .t-h3 { font-size: 1.1rem;  font-weight: 600; color: var(--clr-text-h); }
+    .t-body { font-size: .95rem; line-height: 1.6; }
+    .t-sm   { font-size: .825rem; color: var(--clr-text-m); }
+    .t-xs   { font-size: .75rem;  color: var(--clr-text-s); }
+    .t-label { font-size: .75rem; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--clr-text-m); }
+
+    /* ============================================================
+       LAYOUT SHELLS
+    ============================================================ */
+    /* --- PUBLIC PAGES (landing/login/register) --- */
+    .page { display: none; flex-direction: column; min-height: 100vh; }
+    .page.active { display: flex; }
+
+    /* --- APP SHELL (authenticated) --- */
+    .app-shell { display: none; }
+    .app-shell.active { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--clr-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 200;
+      transition: transform .25s;
+    }
+    .sidebar-logo {
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+    .sidebar-logo span {
+      font-size: 1.5rem; font-weight: 800; letter-spacing: -.5px;
+      color: #fff;
+    }
+    .sidebar-logo span em {
+      color: #C9A84C; font-style: normal;
+    }
+    .sidebar-logo .tagline { font-size: .7rem; color: rgba(255,255,255,.5); margin-top: 2px; letter-spacing: .4px; }
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .nav-section-label {
+      font-size: .65rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: rgba(255,255,255,.35);
+      padding: 16px 24px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 24px;
+      color: rgba(255,255,255,.75);
+      font-size: .9rem; font-weight: 500;
+      border-radius: 0;
+      transition: background .15s, color .15s;
+      cursor: pointer;
+      position: relative;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .nav-item.active { background: rgba(255,255,255,.12); color: #fff; }
+    .nav-item.active::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 3px; background: #C9A84C; border-radius: 0 2px 2px 0;
+    }
+    .nav-item svg { flex-shrink: 0; opacity: .8; }
+    .nav-badge {
+      margin-left: auto;
+      background: #C9A84C; color: #fff;
+      font-size: .65rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 20px;
+    }
+    .sidebar-bottom {
+      padding: 16px 24px;
+      border-top: 1px solid rgba(255,255,255,.1);
+    }
+    .sidebar-user {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-user .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #C9A84C;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: #fff; font-size: .85rem;
+      flex-shrink: 0;
+    }
+    .sidebar-user .info .name { font-size: .85rem; font-weight: 600; color: #fff; }
+    .sidebar-user .info .role { font-size: .7rem; color: rgba(255,255,255,.5); }
+
+    .main-area {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--clr-surface);
+      border-bottom: 1px solid var(--clr-border);
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 28px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-title { font-size: 1rem; font-weight: 700; color: var(--clr-text-h); flex: 1; }
+    .topbar-search {
+      flex: 1; max-width: 400px;
+      display: flex; align-items: center;
+      background: var(--clr-bg); border: 1.5px solid var(--clr-border);
+      border-radius: var(--radius-md); padding: 0 14px; gap: 8px;
+    }
+    .topbar-search input {
+      border: none; background: transparent; outline: none;
+      font-size: .875rem; color: var(--clr-text-b); width: 100%; padding: 9px 0;
+    }
+    .topbar-search svg { color: var(--clr-text-s); flex-shrink: 0; }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: var(--radius-md);
+      background: transparent; border: 1.5px solid var(--clr-border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--clr-text-m); transition: background .15s;
+      position: relative;
+    }
+    .icon-btn:hover { background: var(--clr-bg); }
+    .icon-btn .dot {
+      position: absolute; top: 6px; right: 6px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--clr-danger); border: 2px solid var(--clr-surface);
+    }
+    .content-area { flex: 1; padding: 28px; }
+
+    /* ============================================================
+       COMPONENTS — CARD
+    ============================================================ */
+    .card {
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .card-p { padding: 24px; }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px 0;
+    }
+
+    /* ============================================================
+       COMPONENTS — BADGE
+    ============================================================ */
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: .7rem; font-weight: 600; letter-spacing: .2px;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .badge-green  { background: #D4EDDA; color: #155724; }
+    .badge-yellow { background: #FFF3CD; color: #856404; }
+    .badge-red    { background: #F8D7DA; color: #721C24; }
+    .badge-blue   { background: #D1ECF1; color: #0C5460; }
+    .badge-gray   { background: var(--clr-surface-2); color: var(--clr-text-m); }
+    .badge-gold   { background: #FDF3DC; color: var(--clr-accent); }
+
+    /* ============================================================
+       COMPONENTS — BUTTONS
+    ============================================================ */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 9px 20px; border-radius: var(--radius-md);
+      font-size: .875rem; font-weight: 600;
+      border: 1.5px solid transparent;
+      transition: background .15s, box-shadow .15s, transform .1s;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--clr-primary); color: #fff; border-color: var(--clr-primary); }
+    .btn-primary:hover { background: var(--clr-primary-lt); }
+    .btn-accent  { background: var(--clr-accent); color: #fff; border-color: var(--clr-accent); }
+    .btn-accent:hover { background: var(--clr-accent-lt); }
+    .btn-outline { background: transparent; color: var(--clr-primary); border-color: var(--clr-primary); }
+    .btn-outline:hover { background: var(--clr-primary); color: #fff; }
+    .btn-ghost   { background: transparent; border-color: var(--clr-border); color: var(--clr-text-b); }
+    .btn-ghost:hover { background: var(--clr-bg); }
+    .btn-danger  { background: var(--clr-danger); color: #fff; border-color: var(--clr-danger); }
+    .btn-sm { padding: 6px 14px; font-size: .8rem; }
+    .btn-lg { padding: 12px 28px; font-size: 1rem; }
+    .btn-full { width: 100%; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ============================================================
+       COMPONENTS — FORM
+    ============================================================ */
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label {
+      font-size: .8rem; font-weight: 600; color: var(--clr-text-m);
+      letter-spacing: .2px;
+    }
+    .form-label .req { color: var(--clr-danger); margin-left: 3px; }
+    .form-control {
+      padding: 10px 14px;
+      border: 1.5px solid var(--clr-border);
+      border-radius: var(--radius-md);
+      font-size: .9rem; color: var(--clr-text-b);
+      background: var(--clr-surface);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-control:focus { border-color: var(--clr-primary); box-shadow: 0 0 0 3px rgba(45,80,22,.1); }
+    .form-control.error { border-color: var(--clr-danger); }
+    .form-control.error:focus { box-shadow: 0 0 0 3px rgba(192,57,43,.1); }
+    .form-hint { font-size: .76rem; color: var(--clr-text-s); }
+    .form-error-msg { font-size: .76rem; color: var(--clr-danger); font-weight: 500; display: none; }
+    .form-error-msg.show { display: block; }
+    select.form-control { appearance: none; cursor: pointer; }
+
+    /* ============================================================
+       COMPONENTS — ALERT
+    ============================================================ */
+    .alert {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px; border-radius: var(--radius-md);
+      font-size: .875rem; line-height: 1.5;
+      border: 1px solid transparent;
+    }
+    .alert-icon { flex-shrink: 0; margin-top: 1px; }
+    .alert-danger  { background: var(--clr-danger-bg);  border-color: #F5C6CB; color: #7B241C; }
+    .alert-warn    { background: var(--clr-warn-bg);    border-color: #FDEBD0; color: #7D6608; }
+    .alert-success { background: var(--clr-success-bg); border-color: #A9DFBF; color: #1D6A39; }
+    .alert-info    { background: var(--clr-info-bg);    border-color: #AED6F1; color: #1A5276; }
+    .alert { display: none; }
+    .alert.show { display: flex; }
+
+    /* ============================================================
+       COMPONENTS — MODAL
+    ============================================================ */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 1000;
+      display: none; align-items: center; justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--clr-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%; max-width: 540px;
+      max-height: 90vh; overflow-y: auto;
+      animation: modalIn .2s ease;
+    }
+    .modal-lg { max-width: 720px; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(.95) translateY(10px); }
+      to   { opacity: 1; transform: scale(1)  translateY(0); }
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--clr-border);
+    }
+    .modal-body   { padding: 24px; }
+    .modal-footer {
+      display: flex; gap: 10px; justify-content: flex-end;
+      padding: 16px 24px;
+      border-top: 1px solid var(--clr-border);
+    }
+    .modal-close {
+      background: none; border: none;
+      color: var(--clr-text-s); font-size: 1.3rem;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm); transition: background .15s;
+    }
+    .modal-close:hover { background: var(--clr-bg); color: var(--clr-text-b); }
+
+    /* ============================================================
+       COMPONENTS — TOAST
+    ============================================================ */
+    #toast-container {
+      position: fixed; bottom: 28px; right: 28px;
+      z-index: 2000;
+      display: flex; flex-direction: column; gap: 10px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--clr-text-h); color: #fff;
+      padding: 14px 20px; border-radius: var(--radius-md);
+      font-size: .875rem; font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      display: flex; align-items: center; gap: 10px;
+      max-width: 360px;
+      animation: toastIn .3s ease;
+      pointer-events: all;
+    }
+    .toast.t-success { background: var(--clr-success); }
+    .toast.t-error   { background: var(--clr-danger); }
+    .toast.t-warn    { background: var(--clr-warn); }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ============================================================
+       COMPONENTS — TABLE
+    ============================================================ */
+    .table-wrap { overflow-x: auto; }
+    table.data-table {
+      width: 100%; border-collapse: collapse;
+      font-size: .875rem;
+    }
+    .data-table th {
+      background: var(--clr-bg);
+      color: var(--clr-text-m); font-size: .75rem; font-weight: 700;
+      letter-spacing: .5px; text-transform: uppercase;
+      padding: 11px 16px;
+      text-align: left;
+      border-bottom: 2px solid var(--clr-border);
+      white-space: nowrap;
+    }
+    .data-table td {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--clr-border);
+      color: var(--clr-text-b);
+      vertical-align: middle;
+    }
+    .data-table tbody tr:hover { background: var(--clr-bg); }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ============================================================
+       COMPONENTS — PAGINATION
+    ============================================================ */
+    .pagination {
+      display: flex; align-items: center; gap: 4px;
+      padding: 16px 0 0;
+    }
+    .pg-btn {
+      min-width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm);
+      background: transparent; border: 1.5px solid var(--clr-border);
+      font-size: .825rem; font-weight: 600; color: var(--clr-text-m);
+      cursor: pointer; transition: background .15s;
+    }
+    .pg-btn:hover { background: var(--clr-bg); }
+    .pg-btn.active { background: var(--clr-primary); border-color: var(--clr-primary); color: #fff; }
+    .pg-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ============================================================
+       COMPONENTS — BOOK CARD
+    ============================================================ */
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 18px;
+    }
+    .book-card {
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: box-shadow .2s, transform .2s;
+      cursor: pointer;
+    }
+    .book-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .book-cover {
+      width: 100%; aspect-ratio: 3/4;
+      background: linear-gradient(135deg, var(--clr-surface-2) 0%, #DDD7CE 100%);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .book-cover .cover-icon { font-size: 2.5rem; opacity: .3; }
+    .book-cover .avail-badge {
+      position: absolute; top: 8px; right: 8px;
+    }
+    .book-info { padding: 12px; }
+    .book-title { font-size: .82rem; font-weight: 700; color: var(--clr-text-h); line-height: 1.35; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .book-author { font-size: .73rem; color: var(--clr-text-m); margin-bottom: 6px; }
+    .book-meta { display: flex; align-items: center; justify-content: space-between; }
+
+    /* ============================================================
+       LANDING PAGE
+    ============================================================ */
+    .lp-header {
+      height: var(--topbar-h);
+      background: var(--clr-surface);
+      border-bottom: 1px solid var(--clr-border);
+      display: flex; align-items: center;
+      padding: 0 40px;
+      position: sticky; top: 0; z-index: 100;
+      gap: 20px;
+    }
+    .lp-logo { font-size: 1.4rem; font-weight: 800; letter-spacing: -.3px; color: var(--clr-primary); }
+    .lp-logo em { color: var(--clr-accent); font-style: normal; }
+    .lp-nav { display: flex; gap: 4px; flex: 1; justify-content: center; }
+    .lp-nav a { padding: 8px 16px; font-size: .875rem; font-weight: 500; color: var(--clr-text-m); border-radius: var(--radius-sm); transition: background .15s; }
+    .lp-nav a:hover { background: var(--clr-bg); color: var(--clr-text-h); }
+    .lp-cta { display: flex; gap: 8px; }
+
+    .hero {
+      background: linear-gradient(135deg, var(--clr-primary) 0%, #1A3209 100%);
+      padding: 90px 40px;
+      display: flex; align-items: center; gap: 60px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-text { flex: 1; position: relative; }
+    .hero-text .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.3);
+      color: #C9A84C; font-size: .75rem; font-weight: 700;
+      letter-spacing: .8px; text-transform: uppercase;
+      padding: 5px 14px; border-radius: 20px; margin-bottom: 20px;
+    }
+    .hero-text h1 {
+      font-size: 2.8rem; font-weight: 800; color: #fff;
+      line-height: 1.15; letter-spacing: -.5px; margin-bottom: 18px;
+    }
+    .hero-text h1 em { color: #C9A84C; font-style: normal; }
+    .hero-text p { font-size: 1rem; color: rgba(255,255,255,.75); line-height: 1.7; margin-bottom: 30px; max-width: 480px; }
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-stats {
+      display: flex; gap: 28px; margin-top: 40px;
+    }
+    .hero-stat .num { font-size: 1.6rem; font-weight: 800; color: #C9A84C; }
+    .hero-stat .lbl { font-size: .75rem; color: rgba(255,255,255,.55); }
+
+    .hero-visual {
+      flex: 0 0 380px;
+      position: relative;
+    }
+    .hero-card {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+    .hero-search-box {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+      border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px;
+    }
+    .hero-search-box input {
+      background: transparent; border: none; outline: none;
+      color: #fff; font-size: .9rem; width: 100%;
+    }
+    .hero-search-box input::placeholder { color: rgba(255,255,255,.5); }
+    .hero-book-list { display: flex; flex-direction: column; gap: 8px; }
+    .hero-book-item {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,.07); border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .hero-book-item .cover-mini {
+      width: 32px; height: 44px; border-radius: 3px;
+      background: rgba(201,168,76,.3);
+      flex-shrink: 0;
+    }
+    .hero-book-item .info .title { font-size: .78rem; font-weight: 600; color: #fff; }
+    .hero-book-item .info .author { font-size: .7rem; color: rgba(255,255,255,.5); }
+
+    /* sections */
+    .section { padding: 70px 40px; }
+    .section-alt { background: var(--clr-surface); }
+    .section-header { text-align: center; margin-bottom: 50px; }
+    .section-header .eyebrow {
+      font-size: .72rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--clr-accent);
+      margin-bottom: 10px; display: block;
+    }
+    .section-header h2 { font-size: 2rem; font-weight: 800; color: var(--clr-text-h); margin-bottom: 12px; }
+    .section-header p { font-size: .95rem; color: var(--clr-text-m); max-width: 540px; margin: 0 auto; line-height: 1.7; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+    .feature-card {
+      background: var(--clr-surface); border: 1px solid var(--clr-border);
+      border-radius: var(--radius-lg); padding: 28px;
+      transition: box-shadow .2s, transform .2s;
+    }
+    .section-alt .feature-card { background: var(--clr-bg); }
+    .feature-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--clr-primary), var(--clr-primary-lt));
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px; color: #fff;
+    }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p  { font-size: .875rem; color: var(--clr-text-m); line-height: 1.6; }
+
+    .catalog-preview { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; }
+
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+    .testi-card {
+      background: var(--clr-surface); border: 1px solid var(--clr-border);
+      border-radius: var(--radius-lg); padding: 24px;
+    }
+    .testi-stars { color: #C9A84C; font-size: .9rem; margin-bottom: 12px; }
+    .testi-text { font-size: .875rem; color: var(--clr-text-m); line-height: 1.65; margin-bottom: 16px; font-style: italic; }
+    .testi-user { display: flex; align-items: center; gap: 10px; }
+    .testi-user .av {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--clr-surface-2); display: flex; align-items: center;
+      justify-content: center; font-weight: 700; font-size: .8rem;
+      color: var(--clr-primary);
+    }
+    .testi-user .nm { font-size: .82rem; font-weight: 700; }
+    .testi-user .role { font-size: .72rem; color: var(--clr-text-s); }
+
+    .lp-footer {
+      background: var(--clr-text-h); color: rgba(255,255,255,.7);
+      padding: 50px 40px 30px;
+    }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    .footer-brand .logo { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .footer-brand .logo em { color: #C9A84C; font-style: normal; }
+    .footer-brand p { font-size: .825rem; line-height: 1.7; }
+    .footer-col h4 { font-size: .8rem; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #fff; margin-bottom: 14px; }
+    .footer-col ul li { margin-bottom: 8px; }
+    .footer-col ul li a { font-size: .825rem; transition: color .15s; }
+    .footer-col ul li a:hover { color: #C9A84C; }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,.1);
+      padding-top: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: .775rem;
+    }
+
+    /* ============================================================
+       LOGIN / REGISTER
+    ============================================================ */
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+    }
+    .auth-left {
+      flex: 1;
+      background: linear-gradient(135deg, var(--clr-primary) 0%, #1A3209 100%);
+      padding: 60px;
+      display: flex; flex-direction: column; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .auth-left::after {
+      content: '"Knowledge is the most powerful tool you can possess."';
+      position: absolute; bottom: 40px; left: 60px; right: 60px;
+      font-size: .875rem; color: rgba(255,255,255,.4);
+      font-style: italic; line-height: 1.6;
+    }
+    .auth-left .brand { font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .auth-left .brand em { color: #C9A84C; font-style: normal; }
+    .auth-left .subtitle { color: rgba(255,255,255,.6); font-size: .95rem; line-height: 1.7; max-width: 380px; }
+    .auth-left .decoration {
+      position: absolute; bottom: 80px; right: -40px;
+      width: 220px; height: 220px; border-radius: 50%;
+      background: rgba(201,168,76,.08); border: 1px solid rgba(201,168,76,.1);
+    }
+    .auth-right {
+      flex: 0 0 480px;
+      background: var(--clr-surface);
+      padding: 60px 50px;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .auth-right .auth-header { margin-bottom: 32px; }
+    .auth-right .auth-header h2 { font-size: 1.65rem; font-weight: 800; margin-bottom: 6px; }
+    .auth-right .auth-header p { font-size: .875rem; color: var(--clr-text-m); }
+    .auth-form { display: flex; flex-direction: column; gap: 18px; }
+    .auth-link { font-size: .85rem; color: var(--clr-text-m); text-align: center; margin-top: 16px; }
+    .auth-link a { color: var(--clr-primary); font-weight: 600; }
+    .divider { display: flex; align-items: center; gap: 12px; margin: 4px 0; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--clr-border); }
+    .divider span { font-size: .75rem; color: var(--clr-text-s); }
+    .input-eye {
+      position: relative;
+    }
+    .input-eye .eye-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--clr-text-s); cursor: pointer;
+      padding: 2px;
+    }
+
+    /* ============================================================
+       DASHBOARD
+    ============================================================ */
+    .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      display: flex; flex-direction: column; gap: 4px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute; right: -10px; bottom: -10px;
+      width: 70px; height: 70px; border-radius: 50%;
+      opacity: .06;
+    }
+    .stat-card.green::after { background: var(--clr-success); }
+    .stat-card.gold::after  { background: var(--clr-accent); }
+    .stat-card.red::after   { background: var(--clr-danger); }
+    .stat-card.blue::after  { background: var(--clr-info); }
+    .stat-card .icon {
+      width: 38px; height: 38px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+    .stat-card.green .icon { background: var(--clr-success-bg); color: var(--clr-success); }
+    .stat-card.gold  .icon { background: #FDF3DC; color: var(--clr-accent); }
+    .stat-card.red   .icon { background: var(--clr-danger-bg); color: var(--clr-danger); }
+    .stat-card.blue  .icon { background: var(--clr-info-bg); color: var(--clr-info); }
+    .stat-card .num { font-size: 1.9rem; font-weight: 800; color: var(--clr-text-h); }
+    .stat-card .lbl { font-size: .775rem; color: var(--clr-text-m); }
+    .stat-card .change { font-size: .72rem; color: var(--clr-success); font-weight: 600; margin-top: 4px; }
+
+    .dash-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+    .dash-wide { grid-column: 1 / -1; }
+
+    /* ============================================================
+       CATALOG
+    ============================================================ */
+    .catalog-filters {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--clr-border);
+      background: var(--clr-surface);
+      font-size: .8rem; font-weight: 500;
+      color: var(--clr-text-m); cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .filter-chip.active { background: var(--clr-primary); border-color: var(--clr-primary); color: #fff; }
+
+    /* ============================================================
+       BOOK DETAIL
+    ============================================================ */
+    .book-detail-hero {
+      display: flex; gap: 32px; margin-bottom: 28px;
+    }
+    .book-cover-lg {
+      flex: 0 0 200px; height: 280px;
+      background: linear-gradient(135deg, var(--clr-surface-2), #DDD7CE);
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; opacity: .35;
+      border: 1px solid var(--clr-border);
+    }
+    .location-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--clr-info-bg); border: 1px solid #AED6F1;
+      color: var(--clr-info); font-size: .78rem; font-weight: 600;
+      padding: 5px 12px; border-radius: 20px;
+    }
+
+    /* ============================================================
+       BORROW HISTORY
+    ============================================================ */
+    .borrow-item {
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      display: flex; align-items: flex-start; gap: 16px;
+      transition: box-shadow .15s;
+    }
+    .borrow-item:hover { box-shadow: var(--shadow-sm); }
+    .borrow-cover {
+      width: 50px; height: 68px; border-radius: 4px;
+      background: linear-gradient(135deg, var(--clr-surface-2), #DDD7CE);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; opacity: .4;
+    }
+    .borrow-info { flex: 1; }
+    .borrow-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+    /* ============================================================
+       NOTIFICATION
+    ============================================================ */
+    .notif-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--clr-border);
+      transition: background .15s;
+      cursor: pointer;
+    }
+    .notif-item:hover { background: var(--clr-bg); }
+    .notif-item.unread { background: rgba(45,80,22,.03); }
+    .notif-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--clr-success-bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: var(--clr-success);
+    }
+    .notif-avatar.warn { background: var(--clr-warn-bg); color: var(--clr-warn); }
+    .notif-avatar.danger { background: var(--clr-danger-bg); color: var(--clr-danger); }
+    .notif-avatar.info  { background: var(--clr-info-bg); color: var(--clr-info); }
+    .notif-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--clr-primary);
+      flex-shrink: 0; margin-top: 6px;
+    }
+
+    /* ============================================================
+       ADMIN
+    ============================================================ */
+    .admin-stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+    .chart-bar-wrap { display: flex; gap: 6px; align-items: flex-end; height: 100px; }
+    .chart-bar {
+      flex: 1; border-radius: 3px 3px 0 0;
+      background: var(--clr-primary); opacity: .7;
+      transition: opacity .2s;
+    }
+    .chart-bar:hover { opacity: 1; }
+
+    /* ============================================================
+       PROFILE
+    ============================================================ */
+    .profile-cover {
+      height: 160px;
+      background: linear-gradient(135deg, var(--clr-primary), #1A3209);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      position: relative;
+    }
+    .profile-avatar-wrap {
+      position: absolute; bottom: -40px; left: 32px;
+    }
+    .profile-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: #C9A84C; border: 4px solid var(--clr-surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; font-weight: 700; color: #fff;
+    }
+    .profile-body { padding: 56px 32px 28px; }
+
+    /* ============================================================
+       MISC
+    ============================================================ */
+    .tab-bar {
+      display: flex; gap: 2px;
+      border-bottom: 2px solid var(--clr-border); margin-bottom: 20px;
+    }
+    .tab-btn {
+      padding: 10px 18px; font-size: .875rem; font-weight: 600;
+      background: none; border: none; color: var(--clr-text-m);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: color .15s;
+    }
+    .tab-btn.active { color: var(--clr-primary); border-bottom-color: var(--clr-primary); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 14px; padding: 60px 20px;
+      color: var(--clr-text-s);
+    }
+    .empty-state svg { opacity: .3; }
+    .empty-state p { font-size: .875rem; }
+
+    .search-no-result {
+      display: none; flex-direction: column; align-items: center;
+      padding: 50px; gap: 12px; color: var(--clr-text-s);
+    }
+    .search-no-result.show { display: flex; }
+
+    /* spinner */
+    .spinner {
+      width: 22px; height: 22px; border: 2.5px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading .spinner { display: inline-block; }
+    .loading .btn-text { display: none; }
+
+    /* skeleton */
+    .skeleton { background: linear-gradient(90deg, var(--clr-surface-2) 25%, #E8E4DE 50%, var(--clr-surface-2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--radius-sm); }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    /* password strength */
+    .pw-strength { height: 4px; border-radius: 2px; margin-top: 6px; background: var(--clr-border); transition: width .3s; }
+    .pw-strength-bar { height: 100%; border-radius: 2px; width: 0; transition: width .3s, background .3s; }
+
+    /* rating stars */
+    .star-rating { display: flex; gap: 3px; }
+    .star { font-size: 1.2rem; color: var(--clr-border); cursor: pointer; transition: color .15s; }
+    .star.filled, .star:hover ~ .star { }
+    .star.filled { color: #C9A84C; }
+
+    /* overdue banner */
+    .overdue-banner {
+      background: var(--clr-danger-bg); border: 1px solid #F5C6CB;
+      border-radius: var(--radius-md); padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 3px; }
+
+    /* responsive hint */
+    @media (max-width: 1024px) {
+      .stat-grid { grid-template-columns: repeat(2,1fr); }
+      .dash-grid  { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: repeat(2,1fr); }
+      .catalog-preview { grid-template-columns: repeat(2,1fr); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .hero { flex-direction: column; }
+      .hero-visual { display: none; }
+    }
+    @media (max-width: 768px) {
+      :root { --sidebar-w: 0px; }
+      .sidebar { transform: translateX(-240px); }
+      .sidebar.open { transform: translateX(0); width: 240px; }
+      .main-area { margin-left: 0; }
+      .auth-left { display: none; }
+      .auth-right { flex: 1; }
+      .lp-nav { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .hero { padding: 50px 20px; }
+      .section { padding: 50px 20px; }
+      .lp-header { padding: 0 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     TOAST CONTAINER
+============================================================ -->
+<div id="toast-container"></div>
+
+<!-- ============================================================
+     PAGE: LANDING
+============================================================ -->
+<div class="page active" id="page-landing">
+  <!-- Header -->
+  <header class="lp-header">
+    <div class="lp-logo">LIB<em>RA</em></div>
+    <nav class="lp-nav">
+      <a href="#features">Fitur</a>
+      <a href="#catalog-preview">Katalog</a>
+      <a href="#about">Tentang</a>
+      <a href="#contact">Kontak</a>
+    </nav>
+    <div class="lp-cta">
+      <button class="btn btn-ghost btn-sm" onclick="goPage('page-login')">Masuk</button>
+      <button class="btn btn-primary btn-sm" onclick="goPage('page-register')">Daftar</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-text">
+      <div class="eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Perpustakaan Digital FST
+      </div>
+      <h1>Temukan <em>Ilmu</em><br>Tanpa Batas,<br>Kapan Saja</h1>
+      <p>Platform perpustakaan digital terintegrasi untuk mahasiswa dan civitas akademik Fakultas Sains dan Teknologi. Cari, baca, dan pinjam buku dengan mudah.</p>
+      <div class="hero-cta">
+        <button class="btn btn-accent btn-lg" onclick="goPage('page-register')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Mulai Sekarang
+        </button>
+        <button class="btn btn-outline btn-lg" style="color:#fff;border-color:rgba(255,255,255,.4);" onclick="goPage('page-login')">
+          Masuk ke Akun
+        </button>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num">12.400+</div><div class="lbl">Judul Buku</div></div>
+        <div class="hero-stat"><div class="num">8.200+</div><div class="lbl">Mahasiswa Aktif</div></div>
+        <div class="hero-stat"><div class="num">98.5%</div><div class="lbl">Kepuasan Pengguna</div></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card">
+        <div class="hero-search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Cari judul, penulis, ISBN...">
+        </div>
+        <div class="hero-book-list">
+          <div class="hero-book-item">
+            <div class="cover-mini"></div>
+            <div class="info">
+              <div class="title">Algoritma & Struktur Data</div>
+              <div class="author">Thomas H. Cormen</div>
+            </div>
+            <span class="badge badge-green" style="font-size:.65rem;padding:2px 7px;">Tersedia</span>
+          </div>
+          <div class="hero-book-item">
+            <div class="cover-mini"></div>
+            <div class="info">
+              <div class="title">Fisika Kuantum Dasar</div>
+              <div class="author">Richard Feynman</div>
+            </div>
+            <span class="badge badge-yellow" style="font-size:.65rem;padding:2px 7px;">2 tersisa</span>
+          </div>
+          <div class="hero-book-item">
+            <div class="cover-mini"></div>
+            <div class="info">
+              <div class="title">Kalkulus Lanjut</div>
+              <div class="author">James Stewart</div>
+            </div>
+            <span class="badge badge-green" style="font-size:.65rem;padding:2px 7px;">Tersedia</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-header">
+      <span class="eyebrow">Mengapa LIBRA?</span>
+      <h2>Dirancang untuk Civitas Akademik</h2>
+      <p>Semua yang Anda butuhkan untuk mengakses sumber daya akademik dengan efisien dan nyaman.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <h3>Pencarian Cerdas</h3>
+        <p>Temukan buku berdasarkan judul, penulis, ISBN, atau kata kunci. Filter berdasarkan kategori, tahun, dan ketersediaan stok.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>Peminjaman Online</h3>
+        <p>Ajukan peminjaman kapan saja. Sistem akan memandu Anda ke lokasi spesifik buku di rak perpustakaan.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div>
+        <h3>Notifikasi Real-time</h3>
+        <p>Pengingat otomatis sebelum jatuh tempo, konfirmasi peminjaman, dan notifikasi buku tersedia kembali.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+        <h3>Wishlist & Simpan</h3>
+        <p>Simpan daftar buku yang ingin Anda pinjam berikutnya. Sistem akan memberitahu saat buku tersedia.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+        <h3>Riwayat Lengkap</h3>
+        <p>Pantau seluruh riwayat peminjaman Anda, status pengembalian, dan histori denda dengan detail.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>Keamanan Data</h3>
+        <p>Data pribadi Anda terlindungi dengan enkripsi tingkat enterprise. Autentikasi aman dengan SSO kampus.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Catalog Preview -->
+  <section class="section section-alt" id="catalog-preview">
+    <div class="section-header">
+      <span class="eyebrow">Koleksi Unggulan</span>
+      <h2>Ribuan Judul Menanti Anda</h2>
+      <p>Koleksi buku teks, referensi, dan jurnal yang terus diperbarui sesuai kurikulum terkini.</p>
+    </div>
+    <div class="catalog-preview" style="margin-bottom:32px;">
+      <div class="book-card" onclick="goPage('page-login')">
+        <div class="book-cover" style="background:linear-gradient(135deg,#D4E8D0,#A8C99A)">
+          <span style="font-size:2rem;opacity:.5">📗</span>
+          <span class="avail-badge badge badge-green">Tersedia</span>
+        </div>
+        <div class="book-info">
+          <div class="book-title">Introduction to Algorithms</div>
+          <div class="book-author">Cormen et al.</div>
+          <div class="book-meta"><span class="badge badge-gray">Informatika</span><span style="font-size:.72rem;color:var(--clr-text-s)">★ 4.9</span></div>
+        </div>
+      </div>
+      <div class="book-card" onclick="goPage('page-login')">
+        <div class="book-cover" style="background:linear-gradient(135deg,#D4DCE8,#9AACC9)">
+          <span style="font-size:2rem;opacity:.5">📘</span>
+          <span class="avail-badge badge badge-yellow">2 tersisa</span>
+        </div>
+        <div class="book-info">
+          <div class="book-title">Fisika Kuantum Modern</div>
+          <div class="book-author">Serway & Moses</div>
+          <div class="book-meta"><span class="badge badge-gray">Fisika</span><span style="font-size:.72rem;color:var(--clr-text-s)">★ 4.7</span></div>
+        </div>
+      </div>
+      <div class="book-card" onclick="goPage('page-login')">
+        <div class="book-cover" style="background:linear-gradient(135deg,#E8D4D4,#C99A9A)">
+          <span style="font-size:2rem;opacity:.5">📕</span>
+          <span class="avail-badge badge badge-red">Habis</span>
+        </div>
+        <div class="book-info">
+          <div class="book-title">Kimia Organik Lanjutan</div>
+          <div class="book-author">Paula Bruice</div>
+          <div class="book-meta"><span class="badge badge-gray">Kimia</span><span style="font-size:.72rem;color:var(--clr-text-s)">★ 4.8</span></div>
+        </div>
+      </div>
+      <div class="book-card" onclick="goPage('page-login')">
+        <div class="book-cover" style="background:linear-gradient(135deg,#E8E4D4,#C9C09A)">
+          <span style="font-size:2rem;opacity:.5">📙</span>
+          <span class="avail-badge badge badge-green">Tersedia</span>
+        </div>
+        <div class="book-info">
+          <div class="book-title">Kalkulus Multivariabel</div>
+          <div class="book-author">James Stewart</div>
+          <div class="book-meta"><span class="badge badge-gray">Matematika</span><span style="font-size:.72rem;color:var(--clr-text-s)">★ 4.6</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <button class="btn btn-primary btn-lg" onclick="goPage('page-login')">Jelajahi Semua Koleksi →</button>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="section">
+    <div class="section-header">
+      <span class="eyebrow">Testimoni</span>
+      <h2>Dipercaya Civitas Akademik</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"Sangat memudahkan pencarian buku. Fitur lokasi rak buku luar biasa, saya langsung tahu harus ke mana tanpa bingung."</p>
+        <div class="testi-user">
+          <div class="av">AR</div>
+          <div>
+            <div class="nm">Ahmad Rizki</div>
+            <div class="role">Mahasiswa Teknik Informatika, 2022</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"Sebagai dosen, sangat terbantu dengan fitur manajemen peminjaman. Mahasiswa saya sekarang lebih rajin membaca referensi."</p>
+        <div class="testi-user">
+          <div class="av">SP</div>
+          <div>
+            <div class="nm">Dr. Siti Pratiwi, M.Sc.</div>
+            <div class="role">Dosen Kimia FST</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★☆</div>
+        <p class="testi-text">"Notifikasi pengingat pengembalian sangat membantu. Tidak pernah terlambat lagi sejak menggunakan LIBRA."</p>
+        <div class="testi-user">
+          <div class="av">BN</div>
+          <div>
+            <div class="nm">Budi Nugraha</div>
+            <div class="role">Mahasiswa Matematika, 2021</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="lp-footer" id="contact">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo">LIB<em>RA</em></div>
+        <p>Platform perpustakaan digital resmi Fakultas Sains dan Teknologi. Menghadirkan akses pengetahuan yang mudah, cepat, dan terpercaya.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Navigasi</h4>
+        <ul>
+          <li><a href="#">Beranda</a></li>
+          <li><a href="#">Katalog Buku</a></li>
+          <li><a href="#">Tentang LIBRA</a></li>
+          <li><a href="#">Panduan Penggunaan</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Layanan</h4>
+        <ul>
+          <li><a href="#">Peminjaman Online</a></li>
+          <li><a href="#">Perpanjangan Buku</a></li>
+          <li><a href="#">Reservasi Buku</a></li>
+          <li><a href="#">Lapor Masalah</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Kontak</h4>
+        <ul>
+          <li><a href="#">perpustakaan@fst.ac.id</a></li>
+          <li><a href="#">(022) 1234-5678</a></li>
+          <li><a href="#">Gedung Perpustakaan Lt.1</a></li>
+          <li><a href="#">Sen–Jum: 08.00–16.00</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 LIBRA — Perpustakaan Digital FST. Hak cipta dilindungi.</span>
+      <span>Kebijakan Privasi · Syarat & Ketentuan</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================================================
+     PAGE: LOGIN
+============================================================ -->
+<div class="page" id="page-login">
+  <div class="auth-page">
+    <div class="auth-left">
+      <div class="brand">LIB<em>RA</em></div>
+      <p class="subtitle">Selamat datang kembali. Masuk untuk mengakses ribuan koleksi buku digital dan layanan perpustakaan FST.</p>
+      <div class="decoration"></div>
+    </div>
+    <div class="auth-right">
+      <div class="auth-header">
+        <h2>Masuk ke LIBRA</h2>
+        <p>Gunakan akun Civitas Akademik Anda</p>
+      </div>
+
+      <!-- Error alert -->
+      <div class="alert alert-danger" id="login-alert" role="alert">
+        <span class="alert-icon">⚠️</span>
+        <span id="login-alert-msg">Email atau kata sandi salah. Silakan coba lagi.</span>
+      </div>
+
+      <!-- Too many attempts alert -->
+      <div class="alert alert-warn" id="login-lockout" role="alert">
+        <span class="alert-icon">🔒</span>
+        <span>Akun sementara dikunci setelah 5 kali percobaan gagal. Coba lagi dalam <strong id="lockout-timer">5:00</strong> atau hubungi admin.</span>
+      </div>
+
+      <form class="auth-form" id="form-login" onsubmit="handleLogin(event)" novalidate>
+        <div class="form-group">
+          <label class="form-label">Email / NIM <span class="req">*</span></label>
+          <input type="text" class="form-control" id="login-email" placeholder="contoh: 20220001@fst.ac.id" autocomplete="username">
+          <span class="form-error-msg" id="login-email-err">Email atau NIM tidak boleh kosong.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kata Sandi <span class="req">*</span></label>
+          <div class="input-eye">
+            <input type="password" class="form-control" id="login-pass" placeholder="Masukkan kata sandi" autocomplete="current-password" style="padding-right:42px">
+            <button type="button" class="eye-btn" onclick="togglePass('login-pass',this)" title="Tampilkan/sembunyikan">👁</button>
+          </div>
+          <span class="form-error-msg" id="login-pass-err">Kata sandi tidak boleh kosong.</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <a href="#" style="font-size:.825rem;color:var(--clr-primary);font-weight:600;" onclick="showForgotModal()">Lupa kata sandi?</a>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-login">
+          <span class="btn-text">Masuk</span>
+          <span class="spinner"></span>
+        </button>
+        <button type="button" class="btn btn-ghost btn-full" onclick="demoLogin('mahasiswa')">
+          Demo: Login sebagai Mahasiswa
+        </button>
+        <button type="button" class="btn btn-ghost btn-full" onclick="demoLogin('admin')">
+          Demo: Login sebagai Admin
+        </button>
+      </form>
+      <p class="auth-link">Belum punya akun? <a href="#" onclick="goPage('page-register')">Daftar sekarang</a></p>
+      <p class="auth-link" style="margin-top:8px;"><a href="#" onclick="goPage('page-landing')" style="color:var(--clr-text-s)">← Kembali ke beranda</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: REGISTER
+============================================================ -->
+<div class="page" id="page-register">
+  <div class="auth-page">
+    <div class="auth-left">
+      <div class="brand">LIB<em>RA</em></div>
+      <p class="subtitle">Bergabunglah dengan ribuan civitas akademik yang sudah menggunakan LIBRA untuk kemudahan akses perpustakaan digital.</p>
+      <div class="decoration"></div>
+    </div>
+    <div class="auth-right" style="padding:40px 50px;overflow-y:auto;">
+      <div class="auth-header">
+        <h2>Buat Akun Baru</h2>
+        <p>Isi data diri Anda dengan lengkap dan benar</p>
+      </div>
+
+      <div class="alert alert-danger" id="reg-alert">
+        <span class="alert-icon">⚠️</span>
+        <span id="reg-alert-msg"></span>
+      </div>
+      <div class="alert alert-info" id="reg-email-taken">
+        <span class="alert-icon">ℹ️</span>
+        <span>Email atau NIM sudah terdaftar. <a href="#" onclick="goPage('page-login')" style="font-weight:700;color:var(--clr-info)">Masuk sekarang</a></span>
+      </div>
+
+      <form class="auth-form" id="form-register" onsubmit="handleRegister(event)" novalidate>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="form-group">
+            <label class="form-label">Nama Depan <span class="req">*</span></label>
+            <input type="text" class="form-control" id="reg-fname" placeholder="Nama depan">
+            <span class="form-error-msg" id="reg-fname-err">Nama depan wajib diisi.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nama Belakang</label>
+            <input type="text" class="form-control" id="reg-lname" placeholder="Nama belakang">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">NIM / ID Pegawai <span class="req">*</span></label>
+          <input type="text" class="form-control" id="reg-nim" placeholder="contoh: 20220001" maxlength="12">
+          <span class="form-error-msg" id="reg-nim-err">NIM wajib diisi (min. 8 karakter).</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Institusi <span class="req">*</span></label>
+          <input type="email" class="form-control" id="reg-email" placeholder="nim@fst.ac.id">
+          <span class="form-error-msg" id="reg-email-err">Email institusi tidak valid.</span>
+          <span class="form-hint">Gunakan email institusi (@fst.ac.id atau @staff.fst.ac.id)</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nomor HP <span class="req">*</span></label>
+          <input type="tel" class="form-control" id="reg-phone" placeholder="08xxxxxxxxxx">
+          <span class="form-error-msg" id="reg-phone-err">Nomor HP tidak valid.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Program Studi <span class="req">*</span></label>
+          <select class="form-control" id="reg-prodi">
+            <option value="">— Pilih Program Studi —</option>
+            <option value="ti">Teknik Informatika</option>
+            <option value="si">Sistem Informasi</option>
+            <option value="mat">Matematika</option>
+            <option value="fis">Fisika</option>
+            <option value="kim">Kimia</option>
+            <option value="bio">Biologi</option>
+            <option value="sta">Statistika</option>
+            <option value="staff">Staf / Dosen</option>
+          </select>
+          <span class="form-error-msg" id="reg-prodi-err">Program studi wajib dipilih.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kata Sandi <span class="req">*</span></label>
+          <div class="input-eye">
+            <input type="password" class="form-control" id="reg-pass" placeholder="Min. 8 karakter" oninput="checkPwStrength(this.value)" style="padding-right:42px">
+            <button type="button" class="eye-btn" onclick="togglePass('reg-pass',this)" title="Tampilkan/sembunyikan">👁</button>
+          </div>
+          <div class="pw-strength"><div class="pw-strength-bar" id="pw-bar"></div></div>
+          <span class="form-hint" id="pw-hint">Gunakan huruf besar, angka, dan simbol</span>
+          <span class="form-error-msg" id="reg-pass-err">Kata sandi minimal 8 karakter.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Konfirmasi Kata Sandi <span class="req">*</span></label>
+          <div class="input-eye">
+            <input type="password" class="form-control" id="reg-pass2" placeholder="Ulangi kata sandi" style="padding-right:42px">
+            <button type="button" class="eye-btn" onclick="togglePass('reg-pass2',this)" title="Tampilkan/sembunyikan">👁</button>
+          </div>
+          <span class="form-error-msg" id="reg-pass2-err">Kata sandi tidak cocok.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;background:var(--clr-bg);padding:12px;border-radius:var(--radius-md)">
+          <input type="checkbox" id="reg-tos" style="margin-top:3px;accent-color:var(--clr-primary)">
+          <label for="reg-tos" style="font-size:.825rem;color:var(--clr-text-m);line-height:1.5;">
+            Saya menyetujui <a href="#" style="color:var(--clr-primary);font-weight:600">Syarat & Ketentuan</a> dan <a href="#" style="color:var(--clr-primary);font-weight:600">Kebijakan Privasi</a> LIBRA
+          </label>
+        </div>
+        <span class="form-error-msg show" id="reg-tos-err" style="display:none;margin-top:-10px">Anda harus menyetujui syarat & ketentuan.</span>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-register">
+          <span class="btn-text">Buat Akun</span>
+          <span class="spinner"></span>
+        </button>
+      </form>
+      <p class="auth-link">Sudah punya akun? <a href="#" onclick="goPage('page-login')">Masuk di sini</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP SHELL — STUDENT
+============================================================ -->
+<div class="app-shell" id="shell-student">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar-student">
+    <div class="sidebar-logo">
+      <span>LIB<em>RA</em></span>
+      <div class="tagline">Perpustakaan Digital FST</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Menu Utama</div>
+      <a class="nav-item active" onclick="showView('v-dashboard')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item" onclick="showView('v-catalog')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Katalog Buku
+      </a>
+      <a class="nav-item" onclick="showView('v-borrow-history')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Riwayat Peminjaman
+        <span class="nav-badge" id="badge-overdue">1</span>
+      </a>
+      <a class="nav-item" onclick="showView('v-wishlist')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        Wishlist
+      </a>
+      <div class="nav-section-label">Akun</div>
+      <a class="nav-item" onclick="showView('v-notification')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Notifikasi
+        <span class="nav-badge">3</span>
+      </a>
+      <a class="nav-item" onclick="showView('v-profile')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profil Saya
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="avatar" id="s-avatar">AR</div>
+        <div class="info">
+          <div class="name" id="s-name">Ahmad Rizki</div>
+          <div class="role" id="s-role">Mahasiswa · TI 2022</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-full" style="margin-top:10px;color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15);" onclick="handleLogout()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Keluar
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <div class="main-area">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="global-search" placeholder="Cari judul, penulis, ISBN…" oninput="liveSearch(this.value)">
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="showView('v-notification')" title="Notifikasi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="dot"></span>
+        </button>
+        <button class="icon-btn" onclick="showView('v-profile')" title="Profil">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Views -->
+    <div class="content-area">
+
+      <!-- ── VIEW: DASHBOARD ─────────────────────────────── -->
+      <div id="v-dashboard" class="view active">
+        <!-- Overdue banner -->
+        <div class="overdue-banner" id="overdue-banner">
+          <span style="font-size:1.2rem">⚠️</span>
+          <div style="flex:1">
+            <strong style="color:var(--clr-danger)">Perhatian: Buku Terlambat Dikembalikan!</strong>
+            <p style="font-size:.825rem;margin-top:3px;color:var(--clr-danger)">Anda memiliki <strong>1 buku</strong> yang melewati batas pengembalian. Denda berjalan Rp500/hari. Segera kembalikan untuk menghindari pemblokiran akun.</p>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="showView('v-borrow-history')">Lihat Sekarang</button>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+          <div>
+            <h2 class="t-h2">Selamat datang, <span id="dash-name">Ahmad</span> 👋</h2>
+            <p class="t-sm" style="margin-top:4px">Senin, 10 Maret 2026 · Semester Genap 2025/2026</p>
+          </div>
+          <button class="btn btn-primary" onclick="showView('v-catalog')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Cari Buku
+          </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid">
+          <div class="stat-card green">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+            <div class="num">15</div>
+            <div class="lbl">Total Dipinjam</div>
+            <div class="change">↑ 3 bulan ini</div>
+          </div>
+          <div class="stat-card gold">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+            <div class="num">2</div>
+            <div class="lbl">Sedang Dipinjam</div>
+            <div class="change" style="color:var(--clr-accent)">Aktif sekarang</div>
+          </div>
+          <div class="stat-card red">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div class="num">1</div>
+            <div class="lbl">Terlambat</div>
+            <div class="change" style="color:var(--clr-danger)">Rp500/hari</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+            <div class="num">12</div>
+            <div class="lbl">Wishlist</div>
+            <div class="change" style="color:var(--clr-info)">3 tersedia</div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <!-- Active borrows -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="t-h3">Peminjaman Aktif</h3>
+              <button class="btn btn-ghost btn-sm" onclick="showView('v-borrow-history')">Lihat Semua</button>
+            </div>
+            <div style="padding:16px 24px;display:flex;flex-direction:column;gap:12px;">
+              <!-- Book 1 -->
+              <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--clr-bg);border-radius:var(--radius-md);">
+                <div style="width:44px;height:60px;border-radius:4px;background:linear-gradient(135deg,#D4E8D0,#A8C99A);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;opacity:.6">📗</div>
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:.875rem;">Pemrograman Web Modern dengan React.js</div>
+                  <div class="t-sm">Fachri Agus · Jatuh tempo: <strong style="color:var(--clr-success)">29 Mar 2026</strong></div>
+                </div>
+                <span class="badge badge-green">Berlangsung</span>
+              </div>
+              <!-- Book 2 — overdue -->
+              <div style="display:flex;align-items:center;gap:14px;padding:14px;background:#FDECEA;border-radius:var(--radius-md);border:1px solid #F5C6CB;">
+                <div style="width:44px;height:60px;border-radius:4px;background:linear-gradient(135deg,#F5C6CB,#F08080);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;opacity:.6">📕</div>
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:.875rem;">Kimia Organik Modern</div>
+                  <div class="t-sm">Budi Santoso · Jatuh tempo: <strong style="color:var(--clr-danger)">10 Mar 2026 (TERLAMBAT 5 hari)</strong></div>
+                  <div style="font-size:.75rem;color:var(--clr-danger);margin-top:2px;">⚠ Denda berjalan: Rp2.500</div>
+                </div>
+                <span class="badge badge-red">Terlambat</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sidebar cards -->
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <!-- Due soon -->
+            <div class="card card-p">
+              <h3 class="t-h3" style="margin-bottom:12px">⏰ Jatuh Tempo Segera</h3>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:.825rem;display:flex;justify-content:space-between;align-items:center;">
+                  <span>Algoritma & Struktur Data</span>
+                  <span class="badge badge-yellow">3 hari lagi</span>
+                </div>
+                <div style="font-size:.825rem;display:flex;justify-content:space-between;align-items:center;">
+                  <span>Fisika Kuantum Dasar</span>
+                  <span class="badge badge-green">14 hari lagi</span>
+                </div>
+              </div>
+            </div>
+            <!-- Wishlist available -->
+            <div class="card card-p">
+              <h3 class="t-h3" style="margin-bottom:12px">✅ Wishlist Tersedia</h3>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:.825rem">
+                  <div style="font-weight:600">Kalkulus Lanjutan untuk Teknik</div>
+                  <div class="t-sm">Tersedia • 4 eksemplar</div>
+                  <button class="btn btn-accent btn-sm btn-full" style="margin-top:6px" onclick="openBorrowModal('Kalkulus Lanjutan untuk Teknik','Gedung A, Lantai 2, Rak 07-B, No. Seri KAL-042')">Pinjam Sekarang</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div style="margin-top:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3 class="t-h3">📚 Rekomendasi untuk Anda</h3>
+            <button class="btn btn-ghost btn-sm" onclick="showView('v-catalog')">Lihat Semua</button>
+          </div>
+          <div class="book-grid" id="rec-books"></div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: CATALOG ───────────────────────────────── -->
+      <div id="v-catalog" class="view" style="display:none">
+        <div style="margin-bottom:20px">
+          <h2 class="t-h2">Katalog Buku</h2>
+          <p class="t-sm" style="margin-top:4px">12.400+ judul tersedia di perpustakaan FST</p>
+        </div>
+
+        <!-- Search & Filters -->
+        <div class="card card-p" style="margin-bottom:20px">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+            <div style="flex:1;min-width:220px;display:flex;align-items:center;gap:8px;background:var(--clr-bg);border:1.5px solid var(--clr-border);border-radius:var(--radius-md);padding:0 14px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--clr-text-s)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" placeholder="Cari judul, penulis, ISBN…" class="form-control" style="border:none;background:transparent;padding:10px 0;box-shadow:none" id="cat-search" oninput="filterCatalog()">
+            </div>
+            <select class="form-control" style="width:180px" id="cat-cat" onchange="filterCatalog()">
+              <option value="">Semua Kategori</option>
+              <option>Informatika</option>
+              <option>Matematika</option>
+              <option>Fisika</option>
+              <option>Kimia</option>
+              <option>Biologi</option>
+              <option>Statistika</option>
+            </select>
+            <select class="form-control" style="width:160px" id="cat-avail" onchange="filterCatalog()">
+              <option value="">Semua Status</option>
+              <option value="available">Tersedia</option>
+              <option value="limited">Terbatas</option>
+              <option value="unavailable">Habis</option>
+            </select>
+            <select class="form-control" style="width:160px" id="cat-sort" onchange="filterCatalog()">
+              <option value="relevance">Relevansi</option>
+              <option value="title">Judul A–Z</option>
+              <option value="newest">Terbaru</option>
+              <option value="rating">Rating Tertinggi</option>
+            </select>
+          </div>
+          <div class="catalog-filters" id="filter-chips">
+            <button class="filter-chip active" onclick="setFilterChip(this,'')">Semua</button>
+            <button class="filter-chip" onclick="setFilterChip(this,'Informatika')">Informatika</button>
+            <button class="filter-chip" onclick="setFilterChip(this,'Matematika')">Matematika</button>
+            <button class="filter-chip" onclick="setFilterChip(this,'Fisika')">Fisika</button>
+            <button class="filter-chip" onclick="setFilterChip(this,'Kimia')">Kimia</button>
+            <button class="filter-chip" onclick="setFilterChip(this,'Biologi')">Biologi</button>
+            <button class="filter-chip" onclick="setFilterChip(this,'Statistika')">Statistika</button>
+          </div>
+        </div>
+
+        <!-- No result -->
+        <div class="search-no-result" id="cat-no-result">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <p style="font-size:1rem;font-weight:600;color:var(--clr-text-m)">Tidak ada buku ditemukan</p>
+          <p>Coba kata kunci lain atau ubah filter pencarian Anda.</p>
+          <button class="btn btn-outline btn-sm" onclick="resetCatalogFilters()">Reset Filter</button>
+        </div>
+
+        <!-- Grid -->
+        <div class="book-grid" id="catalog-grid"></div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="cat-pagination">
+          <button class="pg-btn" disabled>‹</button>
+          <button class="pg-btn active">1</button>
+          <button class="pg-btn">2</button>
+          <button class="pg-btn">3</button>
+          <span style="padding:0 6px;color:var(--clr-text-s);font-size:.8rem">…</span>
+          <button class="pg-btn">48</button>
+          <button class="pg-btn">›</button>
+        </div>
+      </div>
+
+      <!-- ── VIEW: BOOK DETAIL ────────────────────────────── -->
+      <div id="v-book-detail" class="view" style="display:none">
+        <button class="btn btn-ghost btn-sm" style="margin-bottom:20px" onclick="backToCatalog()">
+          ← Kembali ke Katalog
+        </button>
+        <div id="book-detail-content"></div>
+      </div>
+
+      <!-- ── VIEW: BORROW HISTORY ────────────────────────── -->
+      <div id="v-borrow-history" class="view" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 class="t-h2">Riwayat Peminjaman</h2>
+            <p class="t-sm">Lihat semua riwayat peminjaman dan status buku Anda</p>
+          </div>
+        </div>
+
+        <!-- Stat mini -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+          <div style="background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:var(--radius-md);padding:14px 16px;text-align:center">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--clr-text-h)">15</div>
+            <div class="t-sm">Semua</div>
+          </div>
+          <div style="background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:var(--radius-md);padding:14px 16px;text-align:center">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--clr-info)">2</div>
+            <div class="t-sm">Aktif</div>
+          </div>
+          <div style="background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:var(--radius-md);padding:14px 16px;text-align:center">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--clr-success)">12</div>
+            <div class="t-sm">Dikembalikan</div>
+          </div>
+          <div style="background:#FDECEA;border:1px solid #F5C6CB;border-radius:var(--radius-md);padding:14px 16px;text-align:center">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--clr-danger)">1</div>
+            <div class="t-sm">Terlambat</div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-all')">Semua (15)</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-active')">Aktif (2)</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-returned')">Dikembalikan (12)</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-overdue')">Terlambat (1)</button>
+        </div>
+
+        <div id="tab-all" class="tab-pane active">
+          <div style="display:flex;flex-direction:column;gap:12px" id="borrow-list"></div>
+        </div>
+        <div id="tab-active" class="tab-pane">
+          <div style="display:flex;flex-direction:column;gap:12px" id="borrow-list-active"></div>
+        </div>
+        <div id="tab-returned" class="tab-pane">
+          <div style="display:flex;flex-direction:column;gap:12px" id="borrow-list-returned"></div>
+        </div>
+        <div id="tab-overdue" class="tab-pane">
+          <div style="display:flex;flex-direction:column;gap:12px" id="borrow-list-overdue"></div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: WISHLIST ──────────────────────────────── -->
+      <div id="v-wishlist" class="view" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 class="t-h2">Wishlist Saya</h2>
+            <p class="t-sm">12 buku tersimpan · 3 tersedia untuk dipinjam</p>
+          </div>
+        </div>
+
+        <!-- Available alert -->
+        <div class="alert alert-success show" style="margin-bottom:16px">
+          <span class="alert-icon">✅</span>
+          <span><strong>3 buku di wishlist Anda kini tersedia!</strong> Segera pinjam sebelum stok habis.</span>
+        </div>
+
+        <div class="book-grid" id="wishlist-grid"></div>
+
+        <!-- Empty wishlist -->
+        <div id="wishlist-empty" style="display:none">
+          <div class="empty-state">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <p>Wishlist Anda kosong.</p>
+            <button class="btn btn-primary btn-sm" onclick="showView('v-catalog')">Jelajahi Katalog</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: NOTIFICATION ─────────────────────────── -->
+      <div id="v-notification" class="view" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 class="t-h2">Notifikasi</h2>
+            <p class="t-sm">3 notifikasi belum dibaca</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="markAllRead()">Tandai semua dibaca</button>
+        </div>
+        <div class="card" id="notif-list"></div>
+      </div>
+
+      <!-- ── VIEW: PROFILE ──────────────────────────────── -->
+      <div id="v-profile" class="view" style="display:none">
+        <h2 class="t-h2" style="margin-bottom:20px">Profil Saya</h2>
+        <div class="card" style="overflow:hidden;margin-bottom:20px">
+          <div class="profile-cover">
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar" id="profile-av">AR</div>
+            </div>
+          </div>
+          <div class="profile-body">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+              <div>
+                <h2 class="t-h2" id="profile-name">Ahmad Rizki</h2>
+                <p class="t-sm" id="profile-nim">NIM: 20220001 · Teknik Informatika 2022</p>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <span class="badge badge-green">Akun Aktif</span>
+                  <span class="badge badge-blue">Mahasiswa</span>
+                </div>
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="openEditProfileModal()">✏️ Edit Profil</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+              <div style="background:var(--clr-bg);border-radius:var(--radius-md);padding:14px;text-align:center">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--clr-primary)">15</div>
+                <div class="t-sm">Total Pinjam</div>
+              </div>
+              <div style="background:var(--clr-bg);border-radius:var(--radius-md);padding:14px;text-align:center">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--clr-accent)">12</div>
+                <div class="t-sm">Dikembalikan</div>
+              </div>
+              <div style="background:var(--clr-bg);border-radius:var(--radius-md);padding:14px;text-align:center">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--clr-danger)">Rp2.500</div>
+                <div class="t-sm">Denda Aktif</div>
+              </div>
+            </div>
+
+            <div class="tab-bar">
+              <button class="tab-btn active" onclick="switchTab(this,'ptab-info')">Informasi</button>
+              <button class="tab-btn" onclick="switchTab(this,'ptab-security')">Keamanan</button>
+              <button class="tab-btn" onclick="switchTab(this,'ptab-prefs')">Preferensi</button>
+            </div>
+
+            <div id="ptab-info" class="tab-pane active">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div class="form-group">
+                  <label class="form-label">Nama Lengkap</label>
+                  <input type="text" class="form-control" value="Ahmad Rizki Pratama" readonly style="background:var(--clr-bg)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">NIM</label>
+                  <input type="text" class="form-control" value="20220001" readonly style="background:var(--clr-bg)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" value="20220001@fst.ac.id" readonly style="background:var(--clr-bg)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nomor HP</label>
+                  <input type="tel" class="form-control" value="081234567890" readonly style="background:var(--clr-bg)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Program Studi</label>
+                  <input type="text" class="form-control" value="Teknik Informatika" readonly style="background:var(--clr-bg)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Angkatan</label>
+                  <input type="text" class="form-control" value="2022" readonly style="background:var(--clr-bg)">
+                </div>
+              </div>
+            </div>
+
+            <div id="ptab-security" class="tab-pane">
+              <form onsubmit="handleChangePassword(event)" novalidate>
+                <div style="display:flex;flex-direction:column;gap:14px;max-width:400px">
+                  <div class="alert alert-success" id="pw-change-success">
+                    <span class="alert-icon">✅</span>
+                    <span>Kata sandi berhasil diubah!</span>
+                  </div>
+                  <div class="alert alert-danger" id="pw-change-error">
+                    <span class="alert-icon">⚠️</span>
+                    <span id="pw-change-error-msg"></span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Kata Sandi Saat Ini <span class="req">*</span></label>
+                    <input type="password" class="form-control" id="pw-current" placeholder="••••••••">
+                    <span class="form-error-msg" id="pw-current-err">Kata sandi saat ini wajib diisi.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Kata Sandi Baru <span class="req">*</span></label>
+                    <input type="password" class="form-control" id="pw-new" placeholder="Min. 8 karakter">
+                    <span class="form-error-msg" id="pw-new-err">Min. 8 karakter.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Konfirmasi Kata Sandi Baru <span class="req">*</span></label>
+                    <input type="password" class="form-control" id="pw-new2" placeholder="Ulangi kata sandi baru">
+                    <span class="form-error-msg" id="pw-new2-err">Kata sandi tidak cocok.</span>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm" style="width:fit-content">Ubah Kata Sandi</button>
+                </div>
+              </form>
+            </div>
+
+            <div id="ptab-prefs" class="tab-pane">
+              <div style="display:flex;flex-direction:column;gap:14px;max-width:400px">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--clr-bg);border-radius:var(--radius-md)">
+                  <div>
+                    <div style="font-weight:600;font-size:.875rem">Notifikasi Email</div>
+                    <div class="t-sm">Terima email pengingat peminjaman</div>
+                  </div>
+                  <input type="checkbox" checked style="accent-color:var(--clr-primary);width:18px;height:18px">
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--clr-bg);border-radius:var(--radius-md)">
+                  <div>
+                    <div style="font-weight:600;font-size:.875rem">Notifikasi Wishlist</div>
+                    <div class="t-sm">Beritahu saat buku wishlist tersedia</div>
+                  </div>
+                  <input type="checkbox" checked style="accent-color:var(--clr-primary);width:18px;height:18px">
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--clr-bg);border-radius:var(--radius-md)">
+                  <div>
+                    <div style="font-weight:600;font-size:.875rem">Pengingat Denda</div>
+                    <div class="t-sm">Beritahu jika ada denda aktif</div>
+                  </div>
+                  <input type="checkbox" checked style="accent-color:var(--clr-primary);width:18px;height:18px">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-area -->
+</div><!-- /shell-student -->
+
+<!-- ============================================================
+     APP SHELL — ADMIN
+============================================================ -->
+<div class="app-shell" id="shell-admin">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span>LIB<em>RA</em></span>
+      <div class="tagline">Panel Administrator</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Manajemen</div>
+      <a class="nav-item active" onclick="showAdminView('av-dashboard')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard Admin
+      </a>
+      <a class="nav-item" onclick="showAdminView('av-books')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Manajemen Buku
+      </a>
+      <a class="nav-item" onclick="showAdminView('av-members')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Manajemen Anggota
+      </a>
+      <a class="nav-item" onclick="showAdminView('av-loans')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Manajemen Peminjaman
+        <span class="nav-badge">5</span>
+      </a>
+      <a class="nav-item" onclick="showAdminView('av-reports')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Laporan & Statistik
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="avatar">AD</div>
+        <div class="info">
+          <div class="name">Admin FST</div>
+          <div class="role">Administrator</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-full" style="margin-top:10px;color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15);" onclick="handleLogout()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Keluar
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <div class="topbar-title" id="admin-page-title">Dashboard Admin</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openAddBookModal()">+ Tambah Buku</button>
+      </div>
+    </header>
+    <div class="content-area">
+
+      <!-- ADMIN DASHBOARD -->
+      <div id="av-dashboard" class="view active">
+        <div style="margin-bottom:24px">
+          <h2 class="t-h2">Dashboard Administrasi</h2>
+          <p class="t-sm">Ringkasan sistem perpustakaan digital FST</p>
+        </div>
+        <div class="admin-stat-grid" style="margin-bottom:24px">
+          <div class="stat-card green">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+            <div class="num">12.400</div>
+            <div class="lbl">Total Koleksi Buku</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+            <div class="num">8.246</div>
+            <div class="lbl">Anggota Aktif</div>
+          </div>
+          <div class="stat-card gold">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+            <div class="num">342</div>
+            <div class="lbl">Peminjaman Aktif</div>
+          </div>
+          <div class="stat-card red">
+            <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            <div class="num">28</div>
+            <div class="lbl">Peminjaman Terlambat</div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <!-- Chart -->
+          <div class="card card-p">
+            <h3 class="t-h3" style="margin-bottom:16px">📊 Aktivitas Peminjaman (30 Hari Terakhir)</h3>
+            <div class="chart-bar-wrap" id="admin-chart"></div>
+            <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--clr-text-s);margin-top:6px;padding:0 2px">
+              <span>1 Feb</span><span>8 Feb</span><span>15 Feb</span><span>22 Feb</span><span>1 Mar</span><span>8 Mar</span>
+            </div>
+          </div>
+          <!-- Latest activity -->
+          <div class="card card-p">
+            <h3 class="t-h3" style="margin-bottom:16px">🔔 Aktivitas Terbaru</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:.825rem">
+              <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--clr-success)">●</span><div><strong>Budi Santoso</strong> mengembalikan <em>Kalkulus Lanjut</em><div class="t-xs">2 menit lalu</div></div></div>
+              <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--clr-accent)">●</span><div><strong>Siti Rahayu</strong> meminjam <em>Fisika Kuantum Modern</em><div class="t-xs">15 menit lalu</div></div></div>
+              <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--clr-danger)">●</span><div><strong>Anggota 20220187</strong> terlambat mengembalikan<div class="t-xs">1 jam lalu</div></div></div>
+              <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--clr-info)">●</span><div><strong>Anggota baru</strong> Ahmad Fauzian terdaftar<div class="t-xs">3 jam lalu</div></div></div>
+              <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--clr-success)">●</span><div><strong>Buku baru</strong> "Deep Learning" ditambahkan<div class="t-xs">5 jam lalu</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: BOOK MANAGEMENT -->
+      <div id="av-books" class="view" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 class="t-h2">Manajemen Buku</h2>
+            <p class="t-sm">Kelola seluruh koleksi perpustakaan</p>
+          </div>
+          <button class="btn btn-primary" onclick="openAddBookModal()">+ Tambah Buku</button>
+        </div>
+
+        <div class="alert alert-info show" style="margin-bottom:16px">
+          <span class="alert-icon">ℹ️</span>
+          <span><strong>5 buku</strong> stok tersisa kurang dari 2. Pertimbangkan untuk menambah eksemplar.</span>
+        </div>
+
+        <div class="card">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--clr-border);display:flex;gap:10px;flex-wrap:wrap">
+            <input type="text" class="form-control" placeholder="Cari buku…" style="width:260px" id="admin-book-search" oninput="filterAdminBooks()">
+            <select class="form-control" style="width:160px">
+              <option>Semua Kategori</option>
+              <option>Informatika</option>
+              <option>Matematika</option>
+              <option>Fisika</option>
+              <option>Kimia</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="admin-books-table">
+              <thead>
+                <tr>
+                  <th>Judul</th>
+                  <th>Penulis</th>
+                  <th>ISBN</th>
+                  <th>Kategori</th>
+                  <th>Lokasi Rak</th>
+                  <th>Stok</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="admin-books-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: MEMBER MANAGEMENT -->
+      <div id="av-members" class="view" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 class="t-h2">Manajemen Anggota</h2>
+            <p class="t-sm">Kelola data civitas akademik</p>
+          </div>
+        </div>
+        <div class="card">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--clr-border);display:flex;gap:10px;flex-wrap:wrap">
+            <input type="text" class="form-control" placeholder="Cari nama, NIM, email…" style="width:280px">
+            <select class="form-control" style="width:160px">
+              <option>Semua Status</option>
+              <option>Aktif</option>
+              <option>Diblokir</option>
+              <option>Tidak Aktif</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Nama</th><th>NIM</th><th>Prodi</th><th>Email</th><th>Aktif Pinjam</th><th>Denda</th><th>Status</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="admin-members-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: LOAN MANAGEMENT -->
+      <div id="av-loans" class="view" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 class="t-h2">Manajemen Peminjaman</h2>
+            <p class="t-sm">Pantau dan kelola seluruh transaksi peminjaman</p>
+          </div>
+        </div>
+        <div class="alert alert-warn show" style="margin-bottom:16px">
+          <span class="alert-icon">⚠️</span>
+          <span><strong>28 peminjaman</strong> melewati batas waktu pengembalian. <a href="#" style="font-weight:700;color:var(--clr-accent)">Kirim pengingat massal →</a></span>
+        </div>
+        <div class="card">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--clr-border);display:flex;gap:10px;flex-wrap:wrap">
+            <input type="text" class="form-control" placeholder="Cari nama anggota atau judul buku…" style="width:280px">
+            <select class="form-control" style="width:160px">
+              <option>Semua Status</option>
+              <option>Berlangsung</option>
+              <option>Terlambat</option>
+              <option>Dikembalikan</option>
+            </select>
+            <input type="date" class="form-control" style="width:160px" title="Filter tanggal">
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Anggota</th><th>Judul Buku</th><th>Lokasi Rak</th><th>Tanggal Pinjam</th><th>Jatuh Tempo</th><th>Status</th><th>Denda</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="admin-loans-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN: REPORTS -->
+      <div id="av-reports" class="view" style="display:none">
+        <div style="margin-bottom:20px">
+          <h2 class="t-h2">Laporan & Statistik</h2>
+          <p class="t-sm">Analitik penggunaan perpustakaan digital</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+          <div class="card card-p">
+            <h3 class="t-h3" style="margin-bottom:12px">📈 Peminjaman Bulan Ini</h3>
+            <div style="font-size:2rem;font-weight:800;color:var(--clr-primary)">1.284</div>
+            <div class="t-sm" style="color:var(--clr-success)">↑ 12% dari bulan lalu</div>
+          </div>
+          <div class="card card-p">
+            <h3 class="t-h3" style="margin-bottom:12px">💰 Total Denda Terkumpul</h3>
+            <div style="font-size:2rem;font-weight:800;color:var(--clr-accent)">Rp 342.500</div>
+            <div class="t-sm">Maret 2026</div>
+          </div>
+          <div class="card card-p">
+            <h3 class="t-h3" style="margin-bottom:12px">🔄 Rata-rata Durasi Pinjam</h3>
+            <div style="font-size:2rem;font-weight:800;color:var(--clr-info)">8.3 hari</div>
+            <div class="t-sm">Dari maks. 14 hari</div>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="card card-p">
+            <h3 class="t-h3" style="margin-bottom:16px">📚 Buku Terpopuler Bulan Ini</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Judul</th><th>Kategori</th><th>Frekuensi Pinjam</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>Introduction to Algorithms</td><td><span class="badge badge-blue">Informatika</span></td><td>87x</td></tr>
+                  <tr><td>2</td><td>Kalkulus Lanjutan</td><td><span class="badge badge-gray">Matematika</span></td><td>64x</td></tr>
+                  <tr><td>3</td><td>Fisika Kuantum Modern</td><td><span class="badge badge-gray">Fisika</span></td><td>51x</td></tr>
+                  <tr><td>4</td><td>Kimia Organik Lanjutan</td><td><span class="badge badge-gray">Kimia</span></td><td>47x</td></tr>
+                  <tr><td>5</td><td>Biologi Molekuler</td><td><span class="badge badge-green">Biologi</span></td><td>43x</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card card-p">
+            <h3 class="t-h3" style="margin-bottom:16px">🎓 Distribusi per Prodi</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px"><span>Teknik Informatika</span><span>34%</span></div><div style="height:8px;background:var(--clr-border);border-radius:4px"><div style="width:34%;height:100%;background:var(--clr-primary);border-radius:4px"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px"><span>Matematika</span><span>22%</span></div><div style="height:8px;background:var(--clr-border);border-radius:4px"><div style="width:22%;height:100%;background:var(--clr-accent);border-radius:4px"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px"><span>Fisika</span><span>18%</span></div><div style="height:8px;background:var(--clr-border);border-radius:4px"><div style="width:18%;height:100%;background:var(--clr-info);border-radius:4px"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px"><span>Kimia</span><span>14%</span></div><div style="height:8px;background:var(--clr-border);border-radius:4px"><div style="width:14%;height:100%;background:var(--clr-success);border-radius:4px"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px"><span>Lainnya</span><span>12%</span></div><div style="height:8px;background:var(--clr-border);border-radius:4px"><div style="width:12%;height:100%;background:var(--clr-text-s);border-radius:4px"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODALS
+============================================================ -->
+
+<!-- Borrow Confirmation -->
+<div class="modal-overlay" id="modal-borrow">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="t-h3">📚 Konfirmasi Peminjaman</h3>
+      <button class="modal-close" onclick="closeModal('modal-borrow')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn show" style="margin-bottom:16px">
+        <span class="alert-icon">⏰</span>
+        <span>Peminjaman maksimal <strong>14 hari</strong>. Keterlambatan dikenakan denda <strong>Rp500/hari</strong>.</span>
+      </div>
+      <div style="background:var(--clr-bg);border-radius:var(--radius-md);padding:16px;margin-bottom:16px">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--clr-text-s);margin-bottom:8px">Detail Buku</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:4px" id="borrow-title"></div>
+        <div class="t-sm" id="borrow-author" style="margin-bottom:12px"></div>
+        <div class="location-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="borrow-location"></span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="form-group">
+          <label class="form-label">Tanggal Pinjam</label>
+          <input type="date" class="form-control" id="borrow-date-start" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jatuh Tempo (maks. 14 hari)</label>
+          <input type="date" class="form-control" id="borrow-date-end" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Catatan (opsional)</label>
+        <textarea class="form-control" rows="2" placeholder="Misal: perlu untuk tugas akhir..."></textarea>
+      </div>
+      <div class="alert alert-danger" id="borrow-error">
+        <span class="alert-icon">⚠️</span>
+        <span id="borrow-error-msg"></span>
+      </div>
+      <div class="alert alert-success" id="borrow-success">
+        <span class="alert-icon">✅</span>
+        <span>Peminjaman berhasil dikonfirmasi! Silakan ambil buku di lokasi yang tertera.</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-borrow')">Batal</button>
+      <button class="btn btn-primary" id="btn-confirm-borrow" onclick="confirmBorrow()">
+        <span class="btn-text">Konfirmasi Pinjam</span>
+        <span class="spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Rate Book Modal -->
+<div class="modal-overlay" id="modal-rate">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="t-h3">⭐ Beri Penilaian</h3>
+      <button class="modal-close" onclick="closeModal('modal-rate')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="t-body" style="margin-bottom:16px">Bagaimana buku ini? Penilaian Anda membantu mahasiswa lain.</p>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Rating</label>
+        <div class="star-rating" id="star-rating">
+          <span class="star" data-v="1" onclick="setRating(1)">★</span>
+          <span class="star" data-v="2" onclick="setRating(2)">★</span>
+          <span class="star" data-v="3" onclick="setRating(3)">★</span>
+          <span class="star" data-v="4" onclick="setRating(4)">★</span>
+          <span class="star" data-v="5" onclick="setRating(5)">★</span>
+        </div>
+        <span class="form-error-msg show" id="rating-err" style="display:none">Pilih rating terlebih dahulu.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ulasan (opsional)</label>
+        <textarea class="form-control" rows="3" id="rating-review" placeholder="Tulis ulasan singkat…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rate')">Batal</button>
+      <button class="btn btn-primary" onclick="submitRating()">Kirim Penilaian</button>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password -->
+<div class="modal-overlay" id="modal-forgot">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="t-h3">🔑 Reset Kata Sandi</h3>
+      <button class="modal-close" onclick="closeModal('modal-forgot')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="forgot-step-1">
+        <p class="t-body" style="margin-bottom:16px">Masukkan email institusi Anda. Kami akan mengirimkan tautan reset kata sandi.</p>
+        <div class="form-group">
+          <label class="form-label">Email Institusi <span class="req">*</span></label>
+          <input type="email" class="form-control" id="forgot-email" placeholder="nim@fst.ac.id">
+          <span class="form-error-msg" id="forgot-email-err">Masukkan email yang valid.</span>
+        </div>
+        <div class="alert alert-danger" id="forgot-alert" style="margin-top:12px">
+          <span class="alert-icon">⚠️</span>
+          <span id="forgot-alert-msg"></span>
+        </div>
+      </div>
+      <div id="forgot-step-2" style="display:none;text-align:center;padding:20px 0">
+        <div style="font-size:3rem;margin-bottom:12px">📧</div>
+        <h3 class="t-h3" style="margin-bottom:8px">Email Terkirim!</h3>
+        <p class="t-body">Cek inbox email institusi Anda. Tautan reset berlaku <strong>1 jam</strong>. Tidak menerima email? Cek folder spam.</p>
+      </div>
+    </div>
+    <div class="modal-footer" id="forgot-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-forgot')">Batal</button>
+      <button class="btn btn-primary" onclick="sendForgotEmail()">Kirim Tautan Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Book Modal (Admin) -->
+<div class="modal-overlay" id="modal-add-book">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="t-h3">➕ Tambah Buku Baru</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-book')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-danger" id="add-book-error">
+        <span class="alert-icon">⚠️</span>
+        <span id="add-book-error-msg"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Judul Buku <span class="req">*</span></label>
+          <input type="text" class="form-control" id="ab-title" placeholder="Judul lengkap buku">
+          <span class="form-error-msg" id="ab-title-err">Judul wajib diisi.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Penulis <span class="req">*</span></label>
+          <input type="text" class="form-control" id="ab-author" placeholder="Nama penulis">
+          <span class="form-error-msg" id="ab-author-err">Penulis wajib diisi.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Penerbit <span class="req">*</span></label>
+          <input type="text" class="form-control" id="ab-publisher" placeholder="Nama penerbit">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ISBN <span class="req">*</span></label>
+          <input type="text" class="form-control" id="ab-isbn" placeholder="978-X-XXX-XXXXX-X" maxlength="17">
+          <span class="form-error-msg" id="ab-isbn-err">ISBN tidak valid.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tahun Terbit <span class="req">*</span></label>
+          <input type="number" class="form-control" id="ab-year" placeholder="2024" min="1900" max="2030">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategori <span class="req">*</span></label>
+          <select class="form-control" id="ab-cat">
+            <option value="">— Pilih —</option>
+            <option>Informatika</option><option>Matematika</option><option>Fisika</option>
+            <option>Kimia</option><option>Biologi</option><option>Statistika</option>
+          </select>
+          <span class="form-error-msg" id="ab-cat-err">Kategori wajib dipilih.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jumlah Eksemplar <span class="req">*</span></label>
+          <input type="number" class="form-control" id="ab-stock" placeholder="1" min="1" max="999">
+          <span class="form-error-msg" id="ab-stock-err">Jumlah min. 1.</span>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">📍 Lokasi Rak <span class="req">*</span> <span style="font-weight:400;color:var(--clr-text-s)">(Gedung, Lantai, Rak, No. Seri)</span></label>
+          <input type="text" class="form-control" id="ab-location" placeholder="Gedung A, Lantai 2, Rak 07-B, No. Seri INF-042">
+          <span class="form-hint">Contoh: Gedung A, Lantai 2, Rak 07-B, No. Seri INF-042</span>
+          <span class="form-error-msg" id="ab-location-err">Lokasi rak wajib diisi secara spesifik.</span>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Deskripsi</label>
+          <textarea class="form-control" id="ab-desc" rows="3" placeholder="Deskripsi singkat isi buku…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-book')">Batal</button>
+      <button class="btn btn-primary" onclick="submitAddBook()">
+        <span class="btn-text">Simpan Buku</span>
+        <span class="spinner"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal-overlay" id="modal-edit-profile">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="t-h3">✏️ Edit Profil</h3>
+      <button class="modal-close" onclick="closeModal('modal-edit-profile')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Nama Depan</label>
+          <input type="text" class="form-control" id="ep-fname" value="Ahmad Rizki">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Belakang</label>
+          <input type="text" class="form-control" id="ep-lname" value="Pratama">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nomor HP</label>
+          <input type="tel" class="form-control" id="ep-phone" value="081234567890">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email (tidak dapat diubah)</label>
+          <input type="email" class="form-control" value="20220001@fst.ac.id" readonly style="background:var(--clr-bg)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-profile')">Batal</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Extend Loan Modal -->
+<div class="modal-overlay" id="modal-extend">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="t-h3">📅 Perpanjang Peminjaman</h3>
+      <button class="modal-close" onclick="closeModal('modal-extend')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info show" style="margin-bottom:14px">
+        <span class="alert-icon">ℹ️</span>
+        <span>Perpanjangan maksimal <strong>1 kali</strong> per buku, selama <strong>7 hari</strong> tambahan. Tidak dapat diperpanjang jika sudah terlambat.</span>
+      </div>
+      <div style="background:var(--clr-bg);padding:14px;border-radius:var(--radius-md)">
+        <div style="font-weight:700" id="extend-title">Pemrograman Web Modern dengan React.js</div>
+        <div class="t-sm" style="margin-top:4px">Jatuh tempo saat ini: <strong>29 Mar 2026</strong> → <strong style="color:var(--clr-success)">5 Apr 2026</strong></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-extend')">Batal</button>
+      <button class="btn btn-primary" onclick="confirmExtend()">Konfirmasi Perpanjangan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Session Timeout -->
+<div class="modal-overlay" id="modal-session">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="t-h3">⏱ Sesi Hampir Berakhir</h3>
+    </div>
+    <div class="modal-body">
+      <p class="t-body">Sesi Anda akan berakhir dalam <strong id="session-countdown">5:00</strong> menit karena tidak aktif. Apakah Anda ingin tetap masuk?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="handleLogout()">Keluar</button>
+      <button class="btn btn-primary" onclick="refreshSession()">Ya, Tetap Masuk</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+let currentUser = null;
+let currentRating = 0;
+let loginAttempts = 0;
+const MAX_ATTEMPTS = 5;
+
+const BOOKS = [
+  { id:1, title:'Introduction to Algorithms', author:'Cormen, Leiserson, Rivest', isbn:'978-0-262-03384-8', category:'Informatika', year:2022, stock:4, location:'Gedung A, Lantai 2, Rak 07-B, No. Seri INF-001', rating:4.9, desc:'Buku referensi komprehensif untuk algoritma dan struktur data.' },
+  { id:2, title:'Clean Code', author:'Robert C. Martin', isbn:'978-0-13-235088-4', category:'Informatika', year:2020, stock:2, location:'Gedung A, Lantai 2, Rak 08-A, No. Seri INF-002', rating:4.8, desc:'Panduan menulis kode yang bersih dan profesional.' },
+  { id:3, title:'Fisika Kuantum Modern', author:'Serway & Moses', isbn:'978-0-538-73805-9', category:'Fisika', year:2021, stock:1, location:'Gedung B, Lantai 1, Rak 03-C, No. Seri FIS-001', rating:4.7, desc:'Pengantar komprehensif mekanika kuantum modern.' },
+  { id:4, title:'Kalkulus Multivariabel', author:'James Stewart', isbn:'978-1-285-74062-1', category:'Matematika', year:2023, stock:5, location:'Gedung B, Lantai 3, Rak 11-A, No. Seri MAT-001', rating:4.6, desc:'Kalkulus untuk program sains dan teknik.' },
+  { id:5, title:'Kimia Organik Lanjutan', author:'Paula Y. Bruice', isbn:'978-0-13-391346-5', category:'Kimia', year:2020, stock:0, location:'Gedung C, Lantai 2, Rak 05-D, No. Seri KIM-001', rating:4.8, desc:'Kimia organik untuk tingkat lanjut.' },
+  { id:6, title:'Biologi Molekuler', author:'Alberts et al.', isbn:'978-0-393-67953-4', category:'Biologi', year:2022, stock:3, location:'Gedung C, Lantai 1, Rak 02-B, No. Seri BIO-001', rating:4.7, desc:'Pengantar biologi sel dan molekuler.' },
+  { id:7, title:'Statistika Terapan', author:'Walpole et al.', isbn:'978-0-13-187711-7', category:'Statistika', year:2019, stock:2, location:'Gedung B, Lantai 2, Rak 09-C, No. Seri STA-001', rating:4.5, desc:'Probabilitas dan statistika untuk insinyur dan ilmuwan.' },
+  { id:8, title:'Machine Learning: A Probabilistic Perspective', author:'Kevin P. Murphy', isbn:'978-0-262-01802-9', category:'Informatika', year:2023, stock:1, location:'Gedung A, Lantai 2, Rak 07-C, No. Seri INF-003', rating:4.9, desc:'Pengantar machine learning berbasis probabilistik.' },
+  { id:9, title:'Aljabar Linear', author:'Gilbert Strang', isbn:'978-0-9802327-7-6', category:'Matematika', year:2021, stock:4, location:'Gedung B, Lantai 3, Rak 12-A, No. Seri MAT-002', rating:4.8, desc:'Aljabar linear dan aplikasinya.' },
+  { id:10, title:'Database System Concepts', author:'Silberschatz et al.', isbn:'978-0-07-352332-3', category:'Informatika', year:2022, stock:3, location:'Gedung A, Lantai 2, Rak 08-B, No. Seri INF-004', rating:4.7, desc:'Konsep sistem basis data komprehensif.' },
+  { id:11, title:'Mekanika Klasik', author:'Herbert Goldstein', isbn:'978-0-201-65702-9', category:'Fisika', year:2018, stock:2, location:'Gedung B, Lantai 1, Rak 04-A, No. Seri FIS-002', rating:4.6, desc:'Mekanika analitik tingkat lanjut.' },
+  { id:12, title:'Kalkulus Lanjutan untuk Teknik', author:'Kreyszig', isbn:'978-0-470-45836-5', category:'Matematika', year:2020, stock:4, location:'Gedung B, Lantai 3, Rak 11-B, No. Seri MAT-003', rating:4.7, desc:'Matematika teknik lanjut.' },
+];
+
+const BORROW_DATA = [
+  { id:'B001', title:'Pemrograman Web Modern dengan React.js', author:'Fachri Agus', status:'active', start:'10 Mar 2026', due:'24 Mar 2026', location:'Gedung A, Lantai 2, Rak 07-A, No. Seri INF-010' },
+  { id:'B002', title:'Algoritma & Struktur Data', author:'Ahmad Aziz', status:'active', start:'05 Mar 2026', due:'02 Jun 2026', location:'Gedung A, Lantai 2, Rak 07-B, No. Seri INF-001' },
+  { id:'B003', title:'Kalkulus Lanjutan untuk Teknik', author:'Kreyszig', status:'overdue', start:'10 Feb 2026', due:'24 Feb 2026', fine:2500, location:'Gedung B, Lantai 3, Rak 11-B, No. Seri MAT-003' },
+  { id:'B004', title:'Fisika Kuantum Dasar', author:'Prof. Dr. Ahmad', status:'returned', start:'07 Jan 2026', due:'21 Jan 2026', returned:'18 Jan 2026', location:'Gedung B, Lantai 1, Rak 03-C, No. Seri FIS-001' },
+  { id:'B005', title:'Kimia Organik Modern', author:'Budi Santoso', status:'returned', start:'01 Dec 2025', due:'15 Dec 2025', returned:'14 Dec 2025', location:'Gedung C, Lantai 2, Rak 05-D, No. Seri KIM-001' },
+];
+
+const NOTIFICATIONS = [
+  { type:'warn', title:'⚠️ Jatuh Tempo Segera', msg:'Buku "Algoritma & Struktur Data" jatuh tempo dalam 3 hari. Segera kembalikan atau perpanjang.', time:'1 jam lalu', unread:true },
+  { type:'danger', title:'🚨 Buku Terlambat!', msg:'Buku "Kalkulus Lanjutan untuk Teknik" telah melewati batas pengembalian. Denda berjalan Rp500/hari.', time:'2 jam lalu', unread:true },
+  { type:'success', title:'✅ Wishlist Tersedia', msg:'Buku "Deep Learning" yang ada di wishlist Anda kini tersedia. Segera pinjam!', time:'5 jam lalu', unread:true },
+  { type:'info', title:'📧 Konfirmasi Peminjaman', msg:'Peminjaman "Pemrograman Web Modern dengan React.js" berhasil. Ambil di Gedung A, Lantai 2, Rak 07-A.', time:'2 hari lalu', unread:false },
+  { type:'info', title:'🔄 Pengingat Rutin', msg:'Anda memiliki 2 buku aktif. Pastikan dikembalikan sebelum jatuh tempo.', time:'3 hari lalu', unread:false },
+];
+
+const WISHLIST_BOOKS = [
+  { id:8, title:'Machine Learning: A Probabilistic Perspective', author:'Kevin P. Murphy', category:'Informatika', stock:1, location:'Gedung A, Lantai 2, Rak 07-C, No. Seri INF-003', rating:4.9 },
+  { id:5, title:'Kimia Organik Lanjutan', author:'Paula Y. Bruice', category:'Kimia', stock:0, location:'Gedung C, Lantai 2, Rak 05-D, No. Seri KIM-001', rating:4.8 },
+  { id:12, title:'Kalkulus Lanjutan untuk Teknik', author:'Kreyszig', category:'Matematika', stock:4, location:'Gedung B, Lantai 3, Rak 11-B, No. Seri MAT-003', rating:4.7 },
+];
+
+/* ============================================================
+   PAGE ROUTING
+============================================================ */
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.app-shell').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goApp(role) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.app-shell').forEach(s => s.classList.remove('active'));
+  if (role === 'admin') {
+    document.getElementById('shell-admin').classList.add('active');
+    renderAdminChart();
+    renderAdminBooks();
+    renderAdminMembers();
+    renderAdminLoans();
+  } else {
+    document.getElementById('shell-student').classList.add('active');
+    renderRecBooks();
+    renderBorrowLists();
+    renderWishlist();
+    renderNotifications();
+    showView('v-dashboard');
+  }
+  window.scrollTo(0,0);
+}
+
+/* ============================================================
+   AUTH
+============================================================ */
+function handleLogin(e) {
+  e.preventDefault();
+  hideAlert('login-alert');
+  hideAlert('login-lockout');
+
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  let valid = true;
+
+  if (!email) { showErr('login-email-err'); showFieldErr('login-email'); valid=false; } else { hideErr('login-email-err'); clearFieldErr('login-email'); }
+  if (!pass)  { showErr('login-pass-err');  showFieldErr('login-pass');  valid=false; } else { hideErr('login-pass-err');  clearFieldErr('login-pass');  }
+  if (!valid) return;
+
+  if (loginAttempts >= MAX_ATTEMPTS) {
+    showAlert('login-lockout');
+    startLockoutTimer();
+    return;
+  }
+
+  setLoading('btn-login', true);
+  setTimeout(() => {
+    setLoading('btn-login', false);
+    // Demo: any email ending @fst.ac.id → student; "admin" → admin
+    if (email.toLowerCase() === 'admin' || email.toLowerCase().includes('admin')) {
+      loginAttempts = 0;
+      currentUser = { name:'Admin FST', role:'admin' };
+      goApp('admin');
+    } else if (email.includes('@') || email.length >= 8) {
+      loginAttempts = 0;
+      const name = email.split('@')[0].replace(/[0-9]/g,'').trim() || 'Pengguna';
+      currentUser = { name: name || 'Ahmad Rizki', role:'student' };
+      updateUserUI();
+      goApp('student');
+    } else {
+      loginAttempts++;
+      const remaining = MAX_ATTEMPTS - loginAttempts;
+      document.getElementById('login-alert-msg').textContent =
+        remaining > 0
+          ? `Email atau kata sandi salah. Sisa percobaan: ${remaining}`
+          : 'Terlalu banyak percobaan gagal. Akun dikunci sementara.';
+      showAlert('login-alert');
+      if (loginAttempts >= MAX_ATTEMPTS) {
+        showAlert('login-lockout');
+        hideAlert('login-alert');
+        startLockoutTimer();
+      }
+    }
+  }, 1200);
+}
+
+function demoLogin(role) {
+  loginAttempts = 0;
+  if (role === 'admin') {
+    currentUser = { name:'Admin FST', role:'admin' };
+    goApp('admin');
+  } else {
+    currentUser = { name:'Ahmad Rizki', nim:'20220001', prodi:'Teknik Informatika', role:'student' };
+    updateUserUI();
+    goApp('student');
+  }
+}
+
+function updateUserUI() {
+  if (!currentUser) return;
+  const initials = currentUser.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const els = ['s-avatar','profile-av'];
+  els.forEach(id => { const e = document.getElementById(id); if(e) e.textContent = initials; });
+  const nm = document.getElementById('s-name'); if(nm) nm.textContent = currentUser.name;
+  const dash = document.getElementById('dash-name'); if(dash) dash.textContent = currentUser.name.split(' ')[0];
+  const pname = document.getElementById('profile-name'); if(pname) pname.textContent = currentUser.name + ' Pratama';
+  const pav = document.getElementById('profile-av'); if(pav) pav.textContent = initials;
+}
+
+function handleRegister(e) {
+  e.preventDefault();
+  hideAlert('reg-alert');
+  hideAlert('reg-email-taken');
+
+  const fname  = document.getElementById('reg-fname').value.trim();
+  const nim    = document.getElementById('reg-nim').value.trim();
+  const email  = document.getElementById('reg-email').value.trim();
+  const phone  = document.getElementById('reg-phone').value.trim();
+  const prodi  = document.getElementById('reg-prodi').value;
+  const pass   = document.getElementById('reg-pass').value;
+  const pass2  = document.getElementById('reg-pass2').value;
+  const tos    = document.getElementById('reg-tos').checked;
+  let valid = true;
+
+  if (!fname)  { showErr('reg-fname-err'); showFieldErr('reg-fname'); valid=false; } else hideErr('reg-fname-err');
+  if (nim.length < 8) { showErr('reg-nim-err'); showFieldErr('reg-nim'); valid=false; } else hideErr('reg-nim-err');
+  if (!validateEmail(email)) { showErr('reg-email-err'); showFieldErr('reg-email'); valid=false; } else hideErr('reg-email-err');
+  if (!validatePhone(phone)) { showErr('reg-phone-err'); showFieldErr('reg-phone'); valid=false; } else hideErr('reg-phone-err');
+  if (!prodi) { showErr('reg-prodi-err'); showFieldErr('reg-prodi'); valid=false; } else hideErr('reg-prodi-err');
+  if (pass.length < 8) { showErr('reg-pass-err'); showFieldErr('reg-pass'); valid=false; } else hideErr('reg-pass-err');
+  if (pass !== pass2)  { showErr('reg-pass2-err'); showFieldErr('reg-pass2'); valid=false; } else hideErr('reg-pass2-err');
+  if (!tos) {
+    const tosErr = document.getElementById('reg-tos-err');
+    tosErr.style.display = 'block';
+    valid=false;
+  } else {
+    document.getElementById('reg-tos-err').style.display = 'none';
+  }
+
+  if (!valid) return;
+
+  // Check domain
+  if (!email.endsWith('@fst.ac.id') && !email.endsWith('@staff.fst.ac.id')) {
+    document.getElementById('reg-alert-msg').textContent = 'Gunakan email institusi (@fst.ac.id atau @staff.fst.ac.id).';
+    showAlert('reg-alert');
+    return;
+  }
+
+  setLoading('btn-register', true);
+  setTimeout(() => {
+    setLoading('btn-register', false);
+    currentUser = { name: fname, nim, prodi, role:'student' };
+    updateUserUI();
+    showToast('Akun berhasil dibuat! Selamat datang di LIBRA.', 'success');
+    goApp('student');
+  }, 1400);
+}
+
+function handleLogout() {
+  currentUser = null;
+  loginAttempts = 0;
+  showToast('Anda telah keluar. Sampai jumpa!', 'success');
+  setTimeout(() => goPage('page-landing'), 300);
+}
+
+function startLockoutTimer() {
+  let sec = 300;
+  const el = document.getElementById('lockout-timer');
+  const t = setInterval(() => {
+    sec--;
+    if (sec <= 0) { clearInterval(t); hideAlert('login-lockout'); loginAttempts=0; return; }
+    const m = Math.floor(sec/60), s = sec%60;
+    if(el) el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+}
+
+/* ============================================================
+   VIEW ROUTING
+============================================================ */
+function showView(id) {
+  document.querySelectorAll('#shell-student .view').forEach(v => v.style.display='none');
+  const target = document.getElementById(id);
+  if (target) target.style.display = 'block';
+
+  // update nav active
+  document.querySelectorAll('#sidebar-student .nav-item').forEach(n => {
+    n.classList.remove('active');
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(id)) n.classList.add('active');
+  });
+}
+
+function showAdminView(id) {
+  document.querySelectorAll('#shell-admin .view').forEach(v => v.style.display='none');
+  const target = document.getElementById(id);
+  if (target) target.style.display = 'block';
+
+  document.querySelectorAll('#shell-admin .nav-item').forEach(n => {
+    n.classList.remove('active');
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(id)) n.classList.add('active');
+  });
+
+  const titles = { 'av-dashboard':'Dashboard Admin','av-books':'Manajemen Buku','av-members':'Manajemen Anggota','av-loans':'Manajemen Peminjaman','av-reports':'Laporan & Statistik' };
+  const titleEl = document.getElementById('admin-page-title');
+  if (titleEl) titleEl.textContent = titles[id] || '';
+}
+
+/* ============================================================
+   CATALOG
+============================================================ */
+function renderCatalog(books) {
+  const grid = document.getElementById('catalog-grid');
+  const noResult = document.getElementById('cat-no-result');
+  if (!grid) return;
+  if (!books.length) { grid.innerHTML=''; noResult.classList.add('show'); return; }
+  noResult.classList.remove('show');
+  grid.innerHTML = books.map(b => bookCard(b, true)).join('');
+}
+
+function bookCard(b, hasActions) {
+  const avail = b.stock > 0 ? (b.stock <= 2 ? 'limited' : 'available') : 'unavailable';
+  const badgeClass = { available:'badge-green', limited:'badge-yellow', unavailable:'badge-red' }[avail];
+  const badgeText  = { available:'Tersedia', limited:`${b.stock} tersisa`, unavailable:'Habis' }[avail];
+  const coverColors = {
+    'Informatika':'linear-gradient(135deg,#D4E8D0,#A8C99A)',
+    'Fisika':'linear-gradient(135deg,#D4DCE8,#9AACC9)',
+    'Kimia':'linear-gradient(135deg,#E8D4D4,#C99A9A)',
+    'Matematika':'linear-gradient(135deg,#E8E4D4,#C9C09A)',
+    'Biologi':'linear-gradient(135deg,#D4E8E0,#9AC9B0)',
+    'Statistika':'linear-gradient(135deg,#E0D4E8,#B09AC9)',
+  };
+  const cover = coverColors[b.category] || 'linear-gradient(135deg,#E8E4DC,#D0C9BC)';
+
+  return `
+    <div class="book-card" onclick="openBookDetail(${b.id})">
+      <div class="book-cover" style="background:${cover}">
+        <span class="cover-icon">📖</span>
+        <span class="avail-badge badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="book-info">
+        <div class="book-title">${b.title}</div>
+        <div class="book-author">${b.author}</div>
+        <div class="book-meta">
+          <span class="badge badge-gray">${b.category}</span>
+          <span style="font-size:.72rem;color:var(--clr-text-s)">★ ${b.rating}</span>
+        </div>
+        ${hasActions && avail !== 'unavailable' ? `<button class="btn btn-primary btn-sm btn-full" style="margin-top:8px" onclick="event.stopPropagation();openBorrowModal('${escHtml(b.title)}','${escHtml(b.location)}','${escHtml(b.author)}')">Pinjam</button>` : ''}
+        ${hasActions && avail === 'unavailable' ? `<button class="btn btn-ghost btn-sm btn-full" style="margin-top:8px" onclick="event.stopPropagation();addWishlist(${b.id})">+ Wishlist</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function filterCatalog() {
+  const q     = (document.getElementById('cat-search')?.value || '').toLowerCase();
+  const cat   = document.getElementById('cat-cat')?.value || '';
+  const avail = document.getElementById('cat-avail')?.value || '';
+  const sort  = document.getElementById('cat-sort')?.value || 'relevance';
+
+  let filtered = BOOKS.filter(b => {
+    const matchQ = !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.isbn.includes(q);
+    const matchCat = !cat || b.category === cat;
+    const matchAvail = !avail || (avail === 'available' && b.stock > 2) || (avail === 'limited' && b.stock > 0 && b.stock <= 2) || (avail === 'unavailable' && b.stock === 0);
+    return matchQ && matchCat && matchAvail;
+  });
+
+  if (sort === 'title') filtered.sort((a,b) => a.title.localeCompare(b.title));
+  else if (sort === 'rating') filtered.sort((a,b) => b.rating - a.rating);
+  else if (sort === 'newest') filtered.sort((a,b) => b.year - a.year);
+
+  renderCatalog(filtered);
+}
+
+function setFilterChip(el, cat) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const catEl = document.getElementById('cat-cat');
+  if (catEl) catEl.value = cat;
+  filterCatalog();
+}
+
+function resetCatalogFilters() {
+  document.getElementById('cat-search').value = '';
+  document.getElementById('cat-cat').value = '';
+  document.getElementById('cat-avail').value = '';
+  document.querySelectorAll('.filter-chip').forEach((c,i) => { c.classList.toggle('active', i===0); });
+  filterCatalog();
+}
+
+function openBookDetail(id) {
+  const book = BOOKS.find(b => b.id === id);
+  if (!book) return;
+  showView('v-book-detail');
+  const avail = book.stock > 0 ? (book.stock <= 2 ? 'limited' : 'available') : 'unavailable';
+  const badgeClass = { available:'badge-green', limited:'badge-yellow', unavailable:'badge-red' }[avail];
+  const badgeText  = { available:`${book.stock} eksemplar tersedia`, limited:`${book.stock} tersisa`, unavailable:'Semua eksemplar sedang dipinjam' }[avail];
+
+  document.getElementById('book-detail-content').innerHTML = `
+    <div class="card card-p">
+      <div class="book-detail-hero">
+        <div class="book-cover-lg">📖</div>
+        <div style="flex:1">
+          <span class="badge ${badgeClass}" style="margin-bottom:10px">${badgeText}</span>
+          <h1 class="t-h1" style="margin-bottom:8px">${book.title}</h1>
+          <p style="font-size:1rem;color:var(--clr-text-m);margin-bottom:4px">oleh <strong>${book.author}</strong></p>
+          <p class="t-sm" style="margin-bottom:12px">Penerbit: — · Tahun: ${book.year} · ISBN: ${book.isbn}</p>
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <span class="badge badge-gray">${book.category}</span>
+            <span class="badge badge-gold">★ ${book.rating} / 5.0</span>
+          </div>
+          <div class="location-pill" style="margin-bottom:18px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            📍 ${book.location}
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            ${avail !== 'unavailable'
+              ? `<button class="btn btn-primary" onclick="openBorrowModal('${escHtml(book.title)}','${escHtml(book.location)}','${escHtml(book.author)}')">📚 Pinjam Sekarang</button>`
+              : `<button class="btn btn-ghost" onclick="addWishlist(${book.id})">🔔 Beritahu Saya</button>`}
+            <button class="btn btn-ghost" onclick="addWishlist(${book.id})">🔖 Tambah ke Wishlist</button>
+          </div>
+          ${avail === 'unavailable' ? `<div class="alert alert-info show" style="margin-top:14px"><span class="alert-icon">ℹ️</span><span>Semua eksemplar sedang dipinjam. Tambahkan ke wishlist dan kami akan memberitahu Anda saat tersedia kembali.</span></div>` : ''}
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--clr-border);padding-top:20px;margin-top:4px">
+        <h3 class="t-h3" style="margin-bottom:10px">Deskripsi</h3>
+        <p class="t-body">${book.desc}</p>
+      </div>
+      <div style="border-top:1px solid var(--clr-border);padding-top:20px;margin-top:20px">
+        <h3 class="t-h3" style="margin-bottom:14px">📍 Panduan Lokasi Buku</h3>
+        <div style="background:var(--clr-info-bg);border:1px solid #AED6F1;border-radius:var(--radius-md);padding:16px">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center">
+            <div><div style="font-size:1.5rem;margin-bottom:4px">🏢</div><div style="font-size:.75rem;font-weight:700">Gedung</div><div style="font-size:.875rem;margin-top:2px">${book.location.split(',')[0]}</div></div>
+            <div><div style="font-size:1.5rem;margin-bottom:4px">🏬</div><div style="font-size:.75rem;font-weight:700">Lantai</div><div style="font-size:.875rem;margin-top:2px">${book.location.split(',')[1]?.trim()}</div></div>
+            <div><div style="font-size:1.5rem;margin-bottom:4px">📦</div><div style="font-size:.75rem;font-weight:700">Rak</div><div style="font-size:.875rem;margin-top:2px">${book.location.split(',')[2]?.trim()}</div></div>
+            <div><div style="font-size:1.5rem;margin-bottom:4px">🔖</div><div style="font-size:.75rem;font-weight:700">No. Seri</div><div style="font-size:.875rem;margin-top:2px">${book.location.split(',')[3]?.trim()}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function backToCatalog() {
+  showView('v-catalog');
+  renderCatalog(BOOKS);
+}
+
+function liveSearch(q) {
+  if (!q) return;
+  // Highlight catalog view
+}
+
+/* ============================================================
+   BORROW
+============================================================ */
+function openBorrowModal(title, location, author) {
+  // Check if user has overdue
+  const hasOverdue = BORROW_DATA.some(b => b.status === 'overdue');
+  const borrowError = document.getElementById('borrow-error');
+  const borrowErrorMsg = document.getElementById('borrow-error-msg');
+  if (hasOverdue) {
+    borrowError.classList.add('show');
+    borrowErrorMsg.textContent = 'Anda memiliki buku terlambat dikembalikan. Kembalikan terlebih dahulu sebelum meminjam buku baru.';
+    document.getElementById('btn-confirm-borrow').disabled = true;
+  } else {
+    borrowError.classList.remove('show');
+    document.getElementById('btn-confirm-borrow').disabled = false;
+  }
+
+  document.getElementById('borrow-title').textContent = title;
+  document.getElementById('borrow-author').textContent = 'oleh ' + (author || '');
+  document.getElementById('borrow-location').textContent = location;
+  document.getElementById('borrow-success').classList.remove('show');
+
+  const today = new Date();
+  const due   = new Date(today); due.setDate(due.getDate() + 14);
+  document.getElementById('borrow-date-start').value = today.toISOString().split('T')[0];
+  document.getElementById('borrow-date-end').value   = due.toISOString().split('T')[0];
+
+  openModal('modal-borrow');
+}
+
+function confirmBorrow() {
+  setLoading('btn-confirm-borrow', true);
+  setTimeout(() => {
+    setLoading('btn-confirm-borrow', false);
+    document.getElementById('borrow-success').classList.add('show');
+    document.getElementById('btn-confirm-borrow').style.display = 'none';
+    showToast('Peminjaman berhasil! Silakan ambil buku di lokasi yang tertera.', 'success');
+    setTimeout(() => closeModal('modal-borrow'), 2000);
+  }, 1500);
+}
+
+/* ============================================================
+   BORROW HISTORY
+============================================================ */
+function renderBorrowLists() {
+  const all      = document.getElementById('borrow-list');
+  const active   = document.getElementById('borrow-list-active');
+  const returned = document.getElementById('borrow-list-returned');
+  const overdue  = document.getElementById('borrow-list-overdue');
+
+  const renderItems = (items) => items.map(b => borrowItem(b)).join('');
+  if(all) all.innerHTML = renderItems(BORROW_DATA);
+  if(active)   active.innerHTML   = renderItems(BORROW_DATA.filter(b => b.status === 'active'));
+  if(returned) returned.innerHTML = renderItems(BORROW_DATA.filter(b => b.status === 'returned'));
+  if(overdue)  overdue.innerHTML  = renderItems(BORROW_DATA.filter(b => b.status === 'overdue'));
+}
+
+function borrowItem(b) {
+  const statusConf = {
+    active:   { class:'badge-green', text:'Berlangsung' },
+    returned: { class:'badge-gray',  text:'Dikembalikan' },
+    overdue:  { class:'badge-red',   text:'Terlambat' },
+  };
+  const s = statusConf[b.status];
+  const isOverdue = b.status === 'overdue';
+  return `
+    <div class="borrow-item" style="${isOverdue ? 'border-color:#F5C6CB;background:#FDECEA' : ''}">
+      <div class="borrow-cover">📖</div>
+      <div class="borrow-info">
+        <div style="font-weight:700;margin-bottom:4px">${b.title}</div>
+        <div class="t-sm">oleh ${b.author}</div>
+        <div class="t-sm" style="margin-top:4px">
+          Tanggal pinjam: ${b.start} · Jatuh tempo: <strong style="color:${isOverdue ? 'var(--clr-danger)' : 'var(--clr-text-b)'}">${b.due}</strong>
+          ${b.returned ? ` · Dikembalikan: ${b.returned}` : ''}
+        </div>
+        <div class="location-pill" style="margin-top:6px;font-size:.73rem">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${b.location}
+        </div>
+        ${isOverdue ? `<div style="font-size:.78rem;color:var(--clr-danger);margin-top:6px;font-weight:600">⚠ Denda berjalan: Rp${b.fine?.toLocaleString('id-ID') || '2.500'}</div>` : ''}
+      </div>
+      <div class="borrow-actions">
+        <span class="badge ${s.class}">${s.text}</span>
+        ${b.status === 'active' ? `<button class="btn btn-outline btn-sm" onclick="openExtendModal('${escHtml(b.title)}')">Perpanjang</button>` : ''}
+        ${isOverdue ? `<button class="btn btn-danger btn-sm" onclick="showToast('Silakan kunjungi meja petugas untuk pembayaran denda.','warn')">Bayar Denda</button>` : ''}
+        ${b.status === 'returned' ? `<button class="btn btn-ghost btn-sm" onclick="openRateModal()">Beri Rating</button>` : ''}
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   WISHLIST
+============================================================ */
+function renderWishlist() {
+  const grid = document.getElementById('wishlist-grid');
+  const empty = document.getElementById('wishlist-empty');
+  if (!grid) return;
+  if (!WISHLIST_BOOKS.length) { grid.style.display='none'; empty.style.display='block'; return; }
+  grid.innerHTML = WISHLIST_BOOKS.map(b => wishlistCard(b)).join('');
+}
+
+function wishlistCard(b) {
+  const avail = b.stock > 0;
+  return `
+    <div class="book-card">
+      <div class="book-cover" style="background:linear-gradient(135deg,#E8E4DC,#D0C9BC)">
+        <span class="cover-icon">📖</span>
+        <span class="avail-badge badge ${avail ? 'badge-green' : 'badge-red'}">${avail ? 'Tersedia' : 'Habis'}</span>
+      </div>
+      <div class="book-info">
+        <div class="book-title">${b.title}</div>
+        <div class="book-author">${b.author}</div>
+        <div class="book-meta"><span class="badge badge-gray">${b.category}</span><span style="font-size:.72rem;color:var(--clr-text-s)">★ ${b.rating}</span></div>
+        ${avail
+          ? `<button class="btn btn-accent btn-sm btn-full" style="margin-top:8px" onclick="openBorrowModal('${escHtml(b.title)}','${escHtml(b.location)}','${escHtml(b.author)}')">Pinjam Sekarang</button>`
+          : `<button class="btn btn-ghost btn-sm btn-full" style="margin-top:8px" disabled>Menunggu Tersedia</button>`}
+        <button class="btn btn-ghost btn-sm btn-full" style="margin-top:4px" onclick="removeWishlist(${b.id})">✕ Hapus dari Wishlist</button>
+      </div>
+    </div>`;
+}
+
+function addWishlist(id) {
+  showToast('Buku ditambahkan ke wishlist. Anda akan diberitahu saat tersedia.', 'success');
+}
+
+function removeWishlist(id) {
+  showToast('Buku dihapus dari wishlist.', 'success');
+}
+
+/* ============================================================
+   NOTIFICATIONS
+============================================================ */
+function renderNotifications() {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  const icons = { warn:'⚠️', danger:'🚨', success:'✅', info:'ℹ️' };
+  const classes = { warn:'warn', danger:'danger', success:'', info:'info' };
+  list.innerHTML = NOTIFICATIONS.map(n => `
+    <div class="notif-item ${n.unread ? 'unread' : ''}">
+      <div class="notif-avatar ${classes[n.type] || ''}">${icons[n.type]}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.875rem">${n.title}</div>
+        <div class="t-sm" style="margin-top:3px">${n.msg}</div>
+        <div class="t-xs" style="margin-top:4px">${n.time}</div>
+      </div>
+      ${n.unread ? '<div class="notif-dot"></div>' : ''}
+    </div>`).join('');
+}
+
+function markAllRead() {
+  NOTIFICATIONS.forEach(n => n.unread = false);
+  renderNotifications();
+  showToast('Semua notifikasi ditandai sebagai dibaca.', 'success');
+}
+
+/* ============================================================
+   RECOMMENDATIONS
+============================================================ */
+function renderRecBooks() {
+  const grid = document.getElementById('rec-books');
+  if (!grid) return;
+  const recs = BOOKS.slice(0, 4);
+  grid.innerHTML = recs.map(b => bookCard(b, true)).join('');
+}
+
+/* ============================================================
+   ADMIN RENDERS
+============================================================ */
+function renderAdminChart() {
+  const wrap = document.getElementById('admin-chart');
+  if (!wrap) return;
+  const data = [22,35,28,42,38,55,47,61,52,44,38,50,62,48,70,55,80,65,72,58,64,88,75,90,68,82,76,95,88,100];
+  wrap.innerHTML = data.map(v => `<div class="chart-bar" style="height:${v}%" title="${v} peminjaman"></div>`).join('');
+}
+
+function renderAdminBooks() {
+  const tbody = document.getElementById('admin-books-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = BOOKS.map(b => {
+    const avail = b.stock > 0 ? (b.stock <= 2 ? 'badge-yellow' : 'badge-green') : 'badge-red';
+    const avTxt = b.stock > 0 ? (b.stock <= 2 ? 'Terbatas' : 'Tersedia') : 'Habis';
+    return `<tr>
+      <td><strong>${b.title}</strong></td>
+      <td>${b.author}</td>
+      <td style="font-family:monospace;font-size:.78rem">${b.isbn}</td>
+      <td><span class="badge badge-blue">${b.category}</span></td>
+      <td style="font-size:.78rem;color:var(--clr-info)">${b.location}</td>
+      <td><strong>${b.stock}</strong></td>
+      <td><span class="badge ${avail}">${avTxt}</span></td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="showToast('Fitur edit buku aktif.','success')">Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--clr-danger)" onclick="confirmDeleteBook(${b.id})">Hapus</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterAdminBooks() {
+  const q = document.getElementById('admin-book-search')?.value.toLowerCase() || '';
+  const rows = document.querySelectorAll('#admin-books-tbody tr');
+  rows.forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function renderAdminMembers() {
+  const tbody = document.getElementById('admin-members-tbody');
+  if (!tbody) return;
+  const members = [
+    { name:'Ahmad Rizki Pratama', nim:'20220001', prodi:'Teknik Informatika', email:'20220001@fst.ac.id', active:2, fine:2500, status:'active' },
+    { name:'Siti Rahayu', nim:'20210045', prodi:'Matematika', email:'20210045@fst.ac.id', active:1, fine:0, status:'active' },
+    { name:'Budi Santoso', nim:'20220187', prodi:'Fisika', email:'20220187@fst.ac.id', active:0, fine:5000, status:'blocked' },
+    { name:'Dewi Kartika', nim:'20230012', prodi:'Kimia', email:'20230012@fst.ac.id', active:1, fine:0, status:'active' },
+  ];
+  tbody.innerHTML = members.map(m => `<tr>
+    <td><strong>${m.name}</strong></td>
+    <td><code>${m.nim}</code></td>
+    <td>${m.prodi}</td>
+    <td>${m.email}</td>
+    <td>${m.active}</td>
+    <td>${m.fine > 0 ? `<span style="color:var(--clr-danger);font-weight:700">Rp${m.fine.toLocaleString('id-ID')}</span>` : '—'}</td>
+    <td><span class="badge ${m.status === 'active' ? 'badge-green' : 'badge-red'}">${m.status === 'active' ? 'Aktif' : 'Diblokir'}</span></td>
+    <td>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Detail anggota dibuka.','success')">Detail</button>
+        <button class="btn btn-ghost btn-sm" style="color:${m.status === 'active' ? 'var(--clr-danger)' : 'var(--clr-success)'}" onclick="showToast('Status anggota diperbarui.','success')">${m.status === 'active' ? 'Blokir' : 'Aktifkan'}</button>
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+function renderAdminLoans() {
+  const tbody = document.getElementById('admin-loans-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = BORROW_DATA.map(b => {
+    const s = { active:'badge-green', returned:'badge-gray', overdue:'badge-red' }[b.status];
+    const t = { active:'Berlangsung', returned:'Dikembalikan', overdue:'Terlambat' }[b.status];
+    return `<tr>
+      <td>Ahmad Rizki</td>
+      <td>${b.title}</td>
+      <td style="font-size:.78rem;color:var(--clr-info)">${b.location}</td>
+      <td>${b.start}</td>
+      <td><strong>${b.due}</strong></td>
+      <td><span class="badge ${s}">${t}</span></td>
+      <td>${b.fine ? `<span style="color:var(--clr-danger);font-weight:700">Rp${b.fine.toLocaleString('id-ID')}</span>` : '—'}</td>
+      <td>
+        ${b.status !== 'returned' ? `<button class="btn btn-ghost btn-sm" onclick="showToast('Pengembalian dikonfirmasi.','success')">Konfirmasi Kembali</button>` : '—'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function confirmDeleteBook(id) {
+  if (confirm('Yakin ingin menghapus buku ini? Tindakan tidak dapat dibatalkan.')) {
+    showToast('Buku berhasil dihapus dari sistem.', 'success');
+  }
+}
+
+/* ============================================================
+   MODAL HELPERS
+============================================================ */
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+}
+function openBorrowModal(title, location, author) {
+  // overloaded above
+  const hasOverdue = BORROW_DATA.some(b => b.status === 'overdue');
+  const borrowError = document.getElementById('borrow-error');
+  const borrowErrorMsg = document.getElementById('borrow-error-msg');
+  const confirmBtn = document.getElementById('btn-confirm-borrow');
+
+  if (hasOverdue) {
+    borrowError.classList.add('show');
+    borrowErrorMsg.textContent = 'Anda memiliki buku terlambat dikembalikan. Kembalikan terlebih dahulu sebelum meminjam buku baru.';
+    if(confirmBtn) confirmBtn.disabled = true;
+  } else {
+    borrowError.classList.remove('show');
+    if(confirmBtn) { confirmBtn.disabled = false; confirmBtn.style.display=''; }
+  }
+
+  const ts = document.getElementById('borrow-title'); if(ts) ts.textContent = title;
+  const as = document.getElementById('borrow-author'); if(as) as.textContent = 'oleh ' + (author||'');
+  const ls = document.getElementById('borrow-location'); if(ls) ls.textContent = location;
+  const ss = document.getElementById('borrow-success'); if(ss) ss.classList.remove('show');
+
+  const today = new Date(), due = new Date(today);
+  due.setDate(due.getDate() + 14);
+  const ds = document.getElementById('borrow-date-start'); if(ds) ds.value = today.toISOString().split('T')[0];
+  const de = document.getElementById('borrow-date-end');   if(de) de.value = due.toISOString().split('T')[0];
+
+  openModal('modal-borrow');
+}
+
+function openRateModal() { openModal('modal-rate'); }
+function openExtendModal(title) {
+  const el = document.getElementById('extend-title');
+  if(el) el.textContent = title;
+  openModal('modal-extend');
+}
+function openEditProfileModal() { openModal('modal-edit-profile'); }
+function openAddBookModal() { openModal('modal-add-book'); }
+function showForgotModal() { openModal('modal-forgot'); }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', (e) => { if (e.target === o) o.classList.remove('open'); });
+});
+
+/* ============================================================
+   FORM ACTIONS
+============================================================ */
+function submitAddBook() {
+  const title    = document.getElementById('ab-title')?.value.trim();
+  const author   = document.getElementById('ab-author')?.value.trim();
+  const isbn     = document.getElementById('ab-isbn')?.value.trim();
+  const cat      = document.getElementById('ab-cat')?.value;
+  const stock    = parseInt(document.getElementById('ab-stock')?.value);
+  const location = document.getElementById('ab-location')?.value.trim();
+  let valid = true;
+
+  if (!title)    { showErr('ab-title-err');    showFieldErr('ab-title');    valid=false; } else hideErr('ab-title-err');
+  if (!author)   { showErr('ab-author-err');   showFieldErr('ab-author');   valid=false; } else hideErr('ab-author-err');
+  if (!validateISBN(isbn)) { showErr('ab-isbn-err'); showFieldErr('ab-isbn'); valid=false; } else hideErr('ab-isbn-err');
+  if (!cat)      { showErr('ab-cat-err');      showFieldErr('ab-cat');      valid=false; } else hideErr('ab-cat-err');
+  if (!stock || stock < 1) { showErr('ab-stock-err'); showFieldErr('ab-stock'); valid=false; } else hideErr('ab-stock-err');
+  if (!location) { showErr('ab-location-err'); showFieldErr('ab-location'); valid=false; } else hideErr('ab-location-err');
+
+  if (!valid) return;
+
+  const addBtn = document.querySelector('#modal-add-book .btn-primary');
+  if(addBtn) setLoading(addBtn.id || '', true);
+  setTimeout(() => {
+    if(addBtn) setLoading(addBtn.id || '', false);
+    closeModal('modal-add-book');
+    showToast(`Buku "${title}" berhasil ditambahkan ke sistem!`, 'success');
+    BOOKS.push({ id: BOOKS.length+1, title, author, isbn, category: cat, year: new Date().getFullYear(), stock, location, rating: 0, desc:'' });
+    renderAdminBooks();
+  }, 1200);
+}
+
+function submitRating() {
+  if (!currentRating) {
+    document.getElementById('rating-err').style.display = 'block';
+    return;
+  }
+  document.getElementById('rating-err').style.display = 'none';
+  closeModal('modal-rate');
+  showToast(`Terima kasih! Rating ${currentRating} bintang berhasil dikirim.`, 'success');
+  currentRating = 0;
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('filled'));
+}
+
+function sendForgotEmail() {
+  const email = document.getElementById('forgot-email')?.value.trim();
+  const err   = document.getElementById('forgot-email-err');
+  const alert = document.getElementById('forgot-alert');
+  if (!validateEmail(email)) { showErr('forgot-email-err'); return; }
+  hideErr('forgot-email-err');
+  if (!email.endsWith('@fst.ac.id') && !email.endsWith('@staff.fst.ac.id')) {
+    document.getElementById('forgot-alert-msg').textContent = 'Email tidak terdaftar di sistem LIBRA.';
+    alert.classList.add('show');
+    return;
+  }
+  alert.classList.remove('show');
+  document.getElementById('forgot-step-1').style.display = 'none';
+  document.getElementById('forgot-step-2').style.display = 'block';
+  document.getElementById('forgot-footer').style.display = 'none';
+}
+
+function handleChangePassword(e) {
+  e.preventDefault();
+  const curr  = document.getElementById('pw-current')?.value;
+  const nw    = document.getElementById('pw-new')?.value;
+  const nw2   = document.getElementById('pw-new2')?.value;
+  const succ  = document.getElementById('pw-change-success');
+  const errel = document.getElementById('pw-change-error');
+  const errm  = document.getElementById('pw-change-error-msg');
+  let valid = true;
+
+  if(!curr) { showErr('pw-current-err'); showFieldErr('pw-current'); valid=false; } else hideErr('pw-current-err');
+  if(!nw || nw.length < 8) { showErr('pw-new-err'); showFieldErr('pw-new'); valid=false; } else hideErr('pw-new-err');
+  if(nw !== nw2) { showErr('pw-new2-err'); showFieldErr('pw-new2'); valid=false; } else hideErr('pw-new2-err');
+  if(!valid) return;
+
+  // Simulate wrong current password
+  if (curr !== 'password123') {
+    errm.textContent = 'Kata sandi saat ini tidak sesuai.';
+    errel.classList.add('show');
+    succ.classList.remove('show');
+    return;
+  }
+
+  errel.classList.remove('show');
+  succ.classList.add('show');
+  showToast('Kata sandi berhasil diperbarui!', 'success');
+}
+
+function confirmExtend() {
+  closeModal('modal-extend');
+  showToast('Peminjaman berhasil diperpanjang hingga 5 April 2026.', 'success');
+}
+
+function saveProfile() {
+  const fname = document.getElementById('ep-fname')?.value || '';
+  const lname = document.getElementById('ep-lname')?.value || '';
+  const full = (fname + ' ' + lname).trim();
+  const nm = document.getElementById('profile-name'); if(nm) nm.textContent = full;
+  const sn = document.getElementById('s-name'); if(sn) sn.textContent = full;
+  const initials = full.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const av = document.getElementById('s-avatar'); if(av) av.textContent = initials;
+  const pav = document.getElementById('profile-av'); if(pav) pav.textContent = initials;
+  closeModal('modal-edit-profile');
+  showToast('Profil berhasil diperbarui!', 'success');
+}
+
+function refreshSession() {
+  closeModal('modal-session');
+  showToast('Sesi berhasil diperpanjang.', 'success');
+}
+
+/* ============================================================
+   TAB SWITCHER
+============================================================ */
+function switchTab(btn, paneId) {
+  const parent = btn.closest('.tab-bar');
+  const parentSection = btn.closest('.card, .view');
+  if (parent) parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (parentSection) parentSection.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById(paneId);
+  if (pane) pane.classList.add('active');
+}
+
+/* ============================================================
+   UTILS
+============================================================ */
+function showToast(msg, type='success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast t-${type}`;
+  const icons = { success:'✅', error:'❌', warn:'⚠️' };
+  toast.innerHTML = `<span>${icons[type]||''}</span><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateX(30px)'; toast.style.transition='all .3s'; setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+function showErr(id)  { const e = document.getElementById(id); if(e) e.classList.add('show'); }
+function hideErr(id)  { const e = document.getElementById(id); if(e) e.classList.remove('show'); }
+function showFieldErr(id) { const e = document.getElementById(id); if(e) e.classList.add('error'); }
+function clearFieldErr(id){ const e = document.getElementById(id); if(e) e.classList.remove('error'); }
+function showAlert(id){ const e = document.getElementById(id); if(e) e.classList.add('show'); }
+function hideAlert(id){ const e = document.getElementById(id); if(e) e.classList.remove('show'); }
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId) || document.querySelector(`button[id="${btnId}"]`);
+  if (!btn) return;
+  if (loading) { btn.classList.add('loading'); btn.disabled = true; }
+  else { btn.classList.remove('loading'); btn.disabled = false; }
+}
+
+function togglePass(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+
+function checkPwStrength(val) {
+  const bar = document.getElementById('pw-bar');
+  const hint = document.getElementById('pw-hint');
+  if (!bar) return;
+  let score = 0;
+  if (val.length >= 8) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const w = ['0%','25%','50%','75%','100%'][score];
+  const c = ['#E74C3C','#E67E22','#F1C40F','#27AE60','#1E8449'][score];
+  const t = ['Sangat lemah','Lemah','Cukup','Kuat','Sangat kuat'][score];
+  bar.style.width = w; bar.style.background = c;
+  if(hint) hint.textContent = `Kekuatan: ${t}`;
+}
+
+function setRating(v) {
+  currentRating = v;
+  document.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('filled', parseInt(s.dataset.v) <= v);
+  });
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validatePhone(phone) {
+  return /^08[0-9]{8,11}$/.test(phone);
+}
+
+function validateISBN(isbn) {
+  return isbn && isbn.replace(/-/g,'').length >= 10;
+}
+
+function escHtml(str) {
+  return (str||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ============================================================
+   SESSION TIMEOUT SIMULATION
+============================================================ */
+let sessionTimer;
+function resetSessionTimer() {
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    if (currentUser) openModal('modal-session');
+  }, 15 * 60 * 1000); // 15 min
+}
+document.addEventListener('mousemove', resetSessionTimer);
+document.addEventListener('keydown', resetSessionTimer);
+
+/* ============================================================
+   INIT
+============================================================ */
+(function init() {
+  // Set today's borrow date
+  const today = new Date().toISOString().split('T')[0];
+  const bds = document.getElementById('borrow-date-start');
+  if(bds) bds.value = today;
+
+  // Render catalog
+  renderCatalog(BOOKS);
+})();
+</script>
+</body>
+</html>
