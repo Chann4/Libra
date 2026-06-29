@@ -3303,5 +3303,47 @@ document.addEventListener('keydown', resetSessionTimer);
   renderCatalog(BOOKS);
 })();
 </script>
+  <!-- Load Library Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Script Logika Login Kita -->
+<script>
+  // 1. Masukkan URL dan Key dari Tahap 3 tadi
+  const supabaseUrl = 'https://xyzcompany.supabase.co'; // Ganti dengan URL project kamu
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR...'; // Ganti dengan anon key project kamu
+  
+  // 2. Inisialisasi Supabase
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  // Contoh Fungsi Register (Daftar Akun Baru)
+  async function daftarUser(email, password) {
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+    });
+    
+    if (error) {
+      alert("Gagal daftar: " + error.message);
+    } else {
+      alert("Berhasil daftar! Silakan login.");
+    }
+  }
+
+  // Contoh Fungsi Login
+  async function loginUser(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+    
+    if (error) {
+      alert("Gagal login: Cek email atau password.");
+    } else {
+      alert("Login berhasil! Selamat datang.");
+      // Di sini kamu bisa arahkan user ke halaman dashboard utama
+      // window.location.href = "dashboard.html";
+    }
+  }
+</script>
 </body>
 </html>
